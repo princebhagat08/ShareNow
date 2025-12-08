@@ -8,8 +8,6 @@ A real-time, peer-to-peer file sharing application featuring **End-to-End Encryp
 
 ## 🚀 Step-by-Step Working
 
-This application works on a **Local Area Network (LAN)** or hotspot. All users must be connected to the same network.
-
 ### 1. Peer Discovery & Connection
 1. **Open the App**: Two users open the application on their browsers.
 2. **Select Roles**:
