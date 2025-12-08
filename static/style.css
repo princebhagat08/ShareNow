@@ -837,22 +837,98 @@ body {
 }
 
 /* ===== Responsive ===== */
-@media (max-width: 768px) {
+/* ===== Extra Responsive Tweaks ===== */
+@media (max-width: 600px) {
+
+    .container {
+        padding: 0 16px;
+    }
+
+    .header .container {
+        flex-direction: column;
+        gap: 12px;
+        text-align: center;
+    }
+
+    .role-card {
+        padding: 32px 20px;
+    }
+
+    .role-icon {
+        width: 72px;
+        height: 72px;
+    }
+
     .section-title {
-        font-size: 36px;
+        font-size: 28px;
+    }
+
+    .section-description {
+        font-size: 16px;
+    }
+
+    .name-input {
+        padding: 14px;
+        font-size: 16px;
     }
 
     .app-header {
-        flex-direction: column;
-        gap: 16px;
+        padding: 16px;
+    }
+
+    .user-avatar {
+        width: 44px;
+        height: 44px;
+        font-size: 20px;
     }
 
     .panel {
-        padding: 24px;
+        padding: 20px;
     }
 
-    .transfer-status {
+    .panel-header {
         flex-direction: column;
-        gap: 16px;
+        align-items: flex-start;
+        gap: 12px;
+    }
+
+    .search-container {
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .peer-search-input {
+        width: 100%;
+    }
+
+    .progress-container {
+        padding: 14px;
+    }
+
+    .file-upload-area {
+        padding: 40px 20px;
+    }
+
+    .modal-content {
+        width: 90%;
+        padding: 32px 20px;
+    }
+
+    .peer-id-value {
+        font-size: 20px;
+        letter-spacing: 2px;
+    }
+}
+
+/* Tiny devices */
+@media (max-width: 400px) {
+    .section-title {
+        font-size: 24px;
+    }
+    .role-card h3 {
+        font-size: 22px;
+    }
+    .role-card p {
+        font-size: 14px;
     }
 }
