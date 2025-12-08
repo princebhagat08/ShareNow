@@ -79,6 +79,28 @@ def handle_register_peer(data):
     emit('registration_success', {'peer_id': peer_id})
 
 
+@socketio.on('find_peer')
+def handle_find_peer(data):
+    """Find a specific peer by ID"""
+    target_peer_id = data.get('target_peer_id')
+    requester_sid = request.sid
+    
+    if target_peer_id in active_peers:
+        peer_data = active_peers[target_peer_id]
+        # Send peer details back to requester
+        socketio.emit('peer_found', {
+            'peer_id': target_peer_id,
+            'name': peer_data['name'],
+            'role': peer_data['role'],
+            'status': peer_data.get('status', 'available')
+        }, room=requester_sid)
+        
+        print(f"Peer found: {target_peer_id}")
+    else:
+        socketio.emit('peer_not_found', {}, room=requester_sid)
+        print(f"Peer not found: {target_peer_id}")
+
+
 @socketio.on('send_connection_request')
 def handle_connection_request(data):
     """Forward connection request to target peer"""
@@ -164,6 +186,62 @@ def handle_send_encrypted_file(data):
         }, room=target_sid)
         
         print(f"Encrypted file forwarded to {active_peers[target_peer_id]['name']}")
+
+
+@socketio.on('send_file_chunk')
+def handle_send_file_chunk(data):
+    """Forward file chunk to receiver for progress tracking"""
+    target_peer_id = data.get('target_peer_id')
+    chunk_data = data.get('chunk_data')
+    chunk_index = data.get('chunk_index')
+    total_chunks = data.get('total_chunks')
+    filename = data.get('filename')
+    
+    if target_peer_id in active_peers:
+        target_sid = active_peers[target_peer_id]['sid']
+        
+        socketio.emit('receive_file_chunk', {
+            'chunk_data': chunk_data,
+            'chunk_index': chunk_index,
+            'total_chunks': total_chunks,
+            'filename': filename
+        }, room=target_sid)
+        
+        print(f"File chunk {chunk_index + 1}/{total_chunks} forwarded to {active_peers[target_peer_id]['name']}")
+
+
+@socketio.on('notify_file_preparation')
+def handle_notify_file_preparation(data):
+    """Notify receiver that sender is preparing the file"""
+    target_peer_id = data.get('target_peer_id')
+    filename = data.get('filename')
+    
+    if target_peer_id in active_peers:
+        target_sid = active_peers[target_peer_id]['sid']
+        
+        socketio.emit('file_preparation_started', {
+            'filename': filename
+        }, room=target_sid)
+        
+        print(f"File preparation notification sent to {active_peers[target_peer_id]['name']}")
+
+
+
+@socketio.on('send_file_complete')
+def handle_send_file_complete(data):
+    """Notify receiver that file transfer is complete"""
+    target_peer_id = data.get('target_peer_id')
+    filename = data.get('filename')
+    
+    if target_peer_id in active_peers:
+        target_sid = active_peers[target_peer_id]['sid']
+        
+        socketio.emit('receive_file_complete', {
+            'filename': filename
+        }, room=target_sid)
+        
+        print(f"File transfer complete notification sent to {active_peers[target_peer_id]['name']}")
+
 
 
 def get_peers_list():

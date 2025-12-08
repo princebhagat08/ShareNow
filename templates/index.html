@@ -136,23 +136,35 @@
                             </svg>
                         </div>
                         <div>
-                            <h3 class="panel-title">Available Peers</h3>
-                            <p class="panel-subtitle">Peers on your local network</p>
+                            <h3 class="panel-title" id="discovery-title">Peer Discovery</h3>
+                            <p class="panel-subtitle" id="discovery-subtitle">Connect with peers</p>
                         </div>
                     </div>
 
-                    <div id="peers-list" class="peers-list">
-                        <div class="empty-state">
-                            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                stroke-width="1.5">
-                                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-                                <circle cx="9" cy="7" r="4" />
-                                <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-                                <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-                            </svg>
-                            <p>No peers found</p>
-                            <span>Waiting for peers to join...</span>
+                    <!-- Receiver: Display Peer ID -->
+                    <div id="receiver-id-display" style="display: none;">
+                        <div class="peer-id-card">
+                            <div class="peer-id-label">Your Unique Peer ID</div>
+                            <div class="peer-id-value" id="peer-id-display"></div>
+                            <button class="btn btn-secondary btn-sm" onclick="copyPeerId()">
+                                <span class="btn-icon">📋</span>
+                                Copy ID
+                            </button>
+                            <p class="peer-id-hint">Share this ID with the sender to receive files</p>
                         </div>
+                    </div>
+
+                    <!-- Sender: Search for Peer -->
+                    <div id="sender-search-panel" style="display: none;">
+                        <div class="search-container">
+                            <input type="text" id="peer-search-input" class="peer-search-input"
+                                placeholder="Enter receiver's Peer ID..." />
+                            <button class="btn btn-primary" onclick="searchPeer()">
+                                <span class="btn-icon">🔍</span>
+                                Search
+                            </button>
+                        </div>
+                        <div id="search-result" class="peers-list"></div>
                     </div>
                 </div>
 
@@ -189,6 +201,15 @@
                             <span class="step-icon" id="transfer-icon">⏳</span>
                             <span>Transfer</span>
                         </div>
+                    </div>
+
+                    <!-- Progress Bar -->
+                    <div class="progress-container" id="progress-container" style="display: none;">
+                        <div class="progress-label" id="progress-label">Preparing...</div>
+                        <div class="progress-bar-wrapper">
+                            <div class="progress-bar" id="progress-bar"></div>
+                        </div>
+                        <div class="progress-text" id="progress-text">0%</div>
                     </div>
 
                     <!-- Sender Interface -->
