@@ -1,6 +1,6 @@
 # Secure P2P File Sharing Application
 
-A real-time, peer-to-peer file sharing application featuring **End-to-End Encryption** (E2EE) using military-grade AES-256-GCM and secure Diffie-Hellman key exchange.
+A real-time, peer-to-peer file sharing application featuring **End-to-End Encryption** (E2EE) using  AES-256-GCM and secure Diffie-Hellman key exchange.
 
 ![Project Banner](https://img.shields.io/badge/Security-AES--256--GCM-green)
 ![Python](https://img.shields.io/badge/Backend-Python%20Flask-blue)
