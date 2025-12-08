@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Secure File Sharing - P2P with Peer Discovery</title>
+    <meta name="description"
+        content="Peer-to-peer encrypted file sharing with automatic peer discovery on local network">
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+</head>
+
+<body>
+    <div class="background-gradient"></div>
+
+    <header class="header">
+        <div class="container">
+            <div class="logo">
+                <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect width="32" height="32" rx="8" fill="url(#logo-gradient)" />
+                    <path d="M16 8L20 12H18V20H14V12H12L16 8Z" fill="white" />
+                    <path d="M10 22H22V24H10V22Z" fill="white" />
+                    <defs>
+                        <linearGradient id="logo-gradient" x1="0" y1="0" x2="32" y2="32">
+                            <stop stop-color="#667eea" />
+                            <stop offset="1" stop-color="#764ba2" />
+                        </linearGradient>
+                    </defs>
+                </svg>
+                <h1>SecureShare P2P</h1>
+            </div>
+            <div class="encryption-badge">
+                <span class="badge-icon">🔐</span>
+                <span>AES-256 + DH + P2P</span>
+            </div>
+        </div>
+    </header>
+
+    <main class="main-content">
+        <div class="container">
+            <!-- Role Selection Screen -->
+            <div id="role-selection-screen" class="screen active">
+                <div class="intro-section">
+                    <h2 class="section-title">Choose Your Role</h2>
+                    <p class="section-description">Select whether you want to send or receive files</p>
+                </div>
+
+                <div class="role-selection-container">
+                    <div class="role-card" id="sender-role-card">
+                        <div class="role-icon sender-gradient">
+                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                                <polyline points="17 8 12 3 7 8" />
+                                <line x1="12" y1="3" x2="12" y2="15" />
+                            </svg>
+                        </div>
+                        <h3>Sender</h3>
+                        <p>Share files with others on your network</p>
+                        <button class="btn btn-primary" onclick="selectRole('sender')">
+                            <span class="btn-icon">📤</span>
+                            Select Sender
+                        </button>
+                    </div>
+
+                    <div class="role-card" id="receiver-role-card">
+                        <div class="role-icon receiver-gradient">
+                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                                <polyline points="7 10 12 15 17 10" />
+                                <line x1="12" y1="15" x2="12" y2="3" />
+                            </svg>
+                        </div>
+                        <h3>Receiver</h3>
+                        <p>Receive files from others on your network</p>
+                        <button class="btn btn-primary" onclick="selectRole('receiver')">
+                            <span class="btn-icon">📥</span>
+                            Select Receiver
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Name Input Screen -->
+            <div id="name-input-screen" class="screen">
+                <div class="intro-section">
+                    <h2 class="section-title">Enter Your Name</h2>
+                    <p class="section-description">This name will be visible to other peers on the network</p>
+                </div>
+
+                <div class="name-input-container">
+                    <input type="text" id="user-name-input" class="name-input" placeholder="Enter your name..."
+                        maxlength="30">
+                    <button class="btn btn-primary" onclick="submitName()">
+                        <span class="btn-icon">✓</span>
+                        Continue
+                    </button>
+                </div>
+            </div>
+
+            <!-- Main Application Screen -->
+            <div id="main-app-screen" class="screen">
+                <div class="app-header">
+                    <div class="user-info">
+                        <div class="user-avatar" id="user-avatar"></div>
+                        <div>
+                            <h3 id="user-name-display"></h3>
+                            <p id="user-role-display"></p>
+                        </div>
+                    </div>
+                    <div class="connection-status">
+                        <span class="status-indicator" id="status-indicator"></span>
+                        <span id="status-text">Connecting...</span>
+                    </div>
+                </div>
+
+                <!-- Peer Discovery Panel -->
+                <div class="panel" id="peer-discovery-panel">
+                    <div class="panel-header">
+                        <div class="panel-icon discovery-icon">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <circle cx="12" cy="12" r="10" />
+                                <circle cx="12" cy="12" r="3" />
+                                <line x1="12" y1="2" x2="12" y2="5" />
+                                <line x1="12" y1="19" x2="12" y2="22" />
+                                <line x1="4.93" y1="4.93" x2="7.05" y2="7.05" />
+                                <line x1="16.95" y1="16.95" x2="19.07" y2="19.07" />
+                            </svg>
+                        </div>
+                        <div>
+                            <h3 class="panel-title">Available Peers</h3>
+                            <p class="panel-subtitle">Peers on your local network</p>
+                        </div>
+                    </div>
+
+                    <div id="peers-list" class="peers-list">
+                        <div class="empty-state">
+                            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="1.5">
+                                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                                <circle cx="9" cy="7" r="4" />
+                                <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                                <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                            </svg>
+                            <p>No peers found</p>
+                            <span>Waiting for peers to join...</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- File Transfer Panel -->
+                <div class="panel" id="file-transfer-panel" style="display: none;">
+                    <div class="panel-header">
+                        <div class="panel-icon transfer-icon">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z" />
+                                <polyline points="13 2 13 9 20 9" />
+                            </svg>
+                        </div>
+                        <div>
+                            <h3 class="panel-title">File Transfer</h3>
+                            <p class="panel-subtitle" id="connected-peer-name">Connected to peer</p>
+                        </div>
+                        <button class="btn btn-secondary btn-sm" onclick="disconnectPeer()">
+                            <span class="btn-icon">✕</span>
+                            Disconnect
+                        </button>
+                    </div>
+
+                    <div class="transfer-status" id="transfer-status">
+                        <div class="status-step">
+                            <span class="step-icon" id="key-exchange-icon">⏳</span>
+                            <span>Key Exchange</span>
+                        </div>
+                        <div class="status-step">
+                            <span class="step-icon" id="encryption-icon">⏳</span>
+                            <span>Encryption</span>
+                        </div>
+                        <div class="status-step">
+                            <span class="step-icon" id="transfer-icon">⏳</span>
+                            <span>Transfer</span>
+                        </div>
+                    </div>
+
+                    <!-- Sender Interface -->
+                    <div id="sender-interface" style="display: none;">
+                        <div class="file-upload-area" id="file-upload-area">
+                            <input type="file" id="file-input" hidden>
+                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                                <polyline points="17 8 12 3 7 8" />
+                                <line x1="12" y1="3" x2="12" y2="15" />
+                            </svg>
+                            <p>Click or drag file to upload</p>
+                            <span class="file-hint">Any file type supported</span>
+                        </div>
+                        <div class="file-info" id="file-info"></div>
+                        <button class="btn btn-primary btn-block" id="send-file-btn" disabled>
+                            <span class="btn-icon">🚀</span>
+                            Encrypt & Send File
+                        </button>
+                    </div>
+
+                    <!-- Receiver Interface -->
+                    <div id="receiver-interface" style="display: none;">
+                        <div class="waiting-state">
+                            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="1.5">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                                <polyline points="7 10 12 15 17 10" />
+                                <line x1="12" y1="15" x2="12" y2="3" />
+                            </svg>
+                            <p>Waiting for file...</p>
+                            <span>The sender will encrypt and send the file</span>
+                        </div>
+                        <div id="received-file-info" style="display: none;"></div>
+                    </div>
+
+                    <div id="transfer-log" class="transfer-log"></div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Connection Request Modal -->
+    <div id="connection-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-icon">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                    <circle cx="8.5" cy="7" r="4" />
+                    <polyline points="17 11 19 13 23 9" />
+                </svg>
+            </div>
+            <h3 id="modal-title">Connection Request</h3>
+            <p id="modal-message"></p>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="rejectConnection()">
+                    <span class="btn-icon">✕</span>
+                    Reject
+                </button>
+                <button class="btn btn-primary" onclick="acceptConnection()">
+                    <span class="btn-icon">✓</span>
+                    Accept
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2024 SecureShare P2P. End-to-End Encrypted File Sharing with Peer Discovery.</p>
+        </div>
+    </footer>
+
+    <script src="/static/app.js"></script>
+</body>
+
+</html>
