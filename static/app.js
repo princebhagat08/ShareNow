@@ -648,8 +648,8 @@ async function sendFile() {
         showProgress('Preparing file...', 0);
 
         const file = state.selectedFile;
-        const CHUNK_SIZE = 16 * 1024; // 16KB chunks
-        const BUFFER_THRESHOLD = 64 * 1024; // 64KB threshold (reduced from 16MB)
+        const CHUNK_SIZE = 64 * 1024; // 64KB chunks (increased for better performance)
+        const BUFFER_THRESHOLD = 1024 * 1024; // 1MB threshold (balanced for speed and stability)
         const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
 
         // Configure bufferedAmountLowThreshold for better backpressure handling
