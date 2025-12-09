@@ -649,7 +649,11 @@ async function sendFile() {
 
         const file = state.selectedFile;
         const CHUNK_SIZE = 16 * 1024; // 16KB chunks
+        const BUFFER_THRESHOLD = 64 * 1024; // 64KB threshold (reduced from 16MB)
         const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
+
+        // Configure bufferedAmountLowThreshold for better backpressure handling
+        state.dataChannel.bufferedAmountLowThreshold = BUFFER_THRESHOLD;
 
         // Send file metadata first
         const metadata = {
@@ -660,6 +664,51 @@ async function sendFile() {
         };
         state.dataChannel.send(JSON.stringify(metadata));
         addLog(`Sending ${file.name} (${totalChunks} chunks)`);
+
+        // Helper function to wait for buffer to drain using event-based approach
+        const waitForBufferDrain = () => {
+            return new Promise((resolve) => {
+                if (state.dataChannel.bufferedAmount <= BUFFER_THRESHOLD) {
+                    resolve();
+                } else {
+                    console.log(`Waiting for buffer to drain... (${state.dataChannel.bufferedAmount} bytes buffered)`);
+                    const onBufferedAmountLow = () => {
+                        state.dataChannel.removeEventListener('bufferedamountlow', onBufferedAmountLow);
+                        resolve();
+                    };
+                    state.dataChannel.addEventListener('bufferedamountlow', onBufferedAmountLow);
+
+                    // Fallback timeout in case event doesn't fire
+                    setTimeout(() => {
+                        state.dataChannel.removeEventListener('bufferedamountlow', onBufferedAmountLow);
+                        resolve();
+                    }, 5000);
+                }
+            });
+        };
+
+        // Helper function to send data with retry logic
+        const sendWithRetry = async (data, maxRetries = 3) => {
+            for (let attempt = 0; attempt < maxRetries; attempt++) {
+                try {
+                    // Wait for buffer to drain before sending
+                    await waitForBufferDrain();
+
+                    // Attempt to send
+                    state.dataChannel.send(data);
+                    return; // Success
+                } catch (error) {
+                    if (error.message && error.message.includes('send queue is full')) {
+                        console.warn(`Send queue full, retry ${attempt + 1}/${maxRetries}`);
+                        // Wait with exponential backoff
+                        await new Promise(resolve => setTimeout(resolve, 100 * Math.pow(2, attempt)));
+                    } else {
+                        throw error; // Re-throw non-queue errors
+                    }
+                }
+            }
+            throw new Error('Failed to send after maximum retries');
+        };
 
         // Read and send file in chunks
         let offset = 0;
@@ -677,13 +726,8 @@ async function sendFile() {
             combined.set(iv, 0);
             combined.set(data, iv.length);
 
-            // Wait for buffer to drain if needed
-            while (state.dataChannel.bufferedAmount > 16 * 1024 * 1024) { // 16MB threshold
-                await new Promise(resolve => setTimeout(resolve, 100));
-            }
-
-            // Send encrypted chunk
-            state.dataChannel.send(combined);
+            // Send encrypted chunk with retry logic
+            await sendWithRetry(combined);
 
             chunkIndex++;
             offset += CHUNK_SIZE;
@@ -691,6 +735,9 @@ async function sendFile() {
             const progress = (chunkIndex / totalChunks) * 100;
             updateProgress(`Sending... (${chunkIndex}/${totalChunks})`, progress);
         }
+
+        // Wait for final buffer drain before sending completion signal
+        await waitForBufferDrain();
 
         // Send completion signal
         state.dataChannel.send(JSON.stringify({ type: 'complete' }));
