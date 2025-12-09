@@ -170,77 +170,60 @@ def handle_send_public_key(data):
         print(f"Public key forwarded to {active_peers[target_peer_id]['name']}")
 
 
-@socketio.on('send_encrypted_file')
-def handle_send_encrypted_file(data):
-    """Forward encrypted file to receiver"""
+# ==================== WebRTC Signaling ====================
+
+@socketio.on('offer')
+def handle_webrtc_offer(data):
+    """Forward WebRTC offer to target peer"""
     target_peer_id = data.get('target_peer_id')
-    encrypted_data = data.get('encrypted_data')
-    filename = data.get('filename')
+    offer = data.get('offer')
+    sender_peer_id = data.get('sender_peer_id')
     
     if target_peer_id in active_peers:
         target_sid = active_peers[target_peer_id]['sid']
         
-        socketio.emit('receive_encrypted_file', {
-            'encrypted_data': encrypted_data,
-            'filename': filename
+        socketio.emit('offer', {
+            'offer': offer,
+            'from_peer_id': sender_peer_id
         }, room=target_sid)
         
-        print(f"Encrypted file forwarded to {active_peers[target_peer_id]['name']}")
+        print(f"WebRTC offer forwarded from {sender_peer_id} to {target_peer_id}")
 
 
-@socketio.on('send_file_chunk')
-def handle_send_file_chunk(data):
-    """Forward file chunk to receiver for progress tracking"""
+@socketio.on('answer')
+def handle_webrtc_answer(data):
+    """Forward WebRTC answer to target peer"""
     target_peer_id = data.get('target_peer_id')
-    chunk_data = data.get('chunk_data')
-    chunk_index = data.get('chunk_index')
-    total_chunks = data.get('total_chunks')
-    filename = data.get('filename')
+    answer = data.get('answer')
+    sender_peer_id = data.get('sender_peer_id')
     
     if target_peer_id in active_peers:
         target_sid = active_peers[target_peer_id]['sid']
         
-        socketio.emit('receive_file_chunk', {
-            'chunk_data': chunk_data,
-            'chunk_index': chunk_index,
-            'total_chunks': total_chunks,
-            'filename': filename
+        socketio.emit('answer', {
+            'answer': answer,
+            'from_peer_id': sender_peer_id
         }, room=target_sid)
         
-        print(f"File chunk {chunk_index + 1}/{total_chunks} forwarded to {active_peers[target_peer_id]['name']}")
+        print(f"WebRTC answer forwarded from {sender_peer_id} to {target_peer_id}")
 
 
-@socketio.on('notify_file_preparation')
-def handle_notify_file_preparation(data):
-    """Notify receiver that sender is preparing the file"""
+@socketio.on('ice_candidate')
+def handle_ice_candidate(data):
+    """Forward ICE candidate to target peer"""
     target_peer_id = data.get('target_peer_id')
-    filename = data.get('filename')
+    candidate = data.get('candidate')
+    sender_peer_id = data.get('sender_peer_id')
     
     if target_peer_id in active_peers:
         target_sid = active_peers[target_peer_id]['sid']
         
-        socketio.emit('file_preparation_started', {
-            'filename': filename
+        socketio.emit('ice_candidate', {
+            'candidate': candidate,
+            'from_peer_id': sender_peer_id
         }, room=target_sid)
         
-        print(f"File preparation notification sent to {active_peers[target_peer_id]['name']}")
-
-
-
-@socketio.on('send_file_complete')
-def handle_send_file_complete(data):
-    """Notify receiver that file transfer is complete"""
-    target_peer_id = data.get('target_peer_id')
-    filename = data.get('filename')
-    
-    if target_peer_id in active_peers:
-        target_sid = active_peers[target_peer_id]['sid']
-        
-        socketio.emit('receive_file_complete', {
-            'filename': filename
-        }, room=target_sid)
-        
-        print(f"File transfer complete notification sent to {active_peers[target_peer_id]['name']}")
+        print(f"ICE candidate forwarded from {sender_peer_id} to {target_peer_id}")
 
 
 
@@ -313,61 +296,6 @@ def derive_secret():
         return jsonify({'error': str(e)}), 500
 
 
-@app.route('/api/files/encrypt', methods=['POST'])
-def encrypt_file():
-    """Encrypt uploaded file"""
-    try:
-        if 'file' not in request.files:
-            return jsonify({'error': 'No file provided'}), 400
-        
-        file = request.files['file']
-        shared_secret = request.form.get('shared_secret')
-        
-        if not shared_secret:
-            return jsonify({'error': 'Shared secret required'}), 400
-        
-        # Read file data
-        file_data = file.read()
-        original_filename = file.filename
-        
-        # Encrypt
-        encrypted_data_b64 = AESCipher.encrypt(file_data, shared_secret)
-        
-        return jsonify({
-            'success': True,
-            'encrypted_data': encrypted_data_b64,
-            'original_filename': original_filename
-        })
-    
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-
-@app.route('/api/files/decrypt', methods=['POST'])
-def decrypt_file():
-    """Decrypt uploaded file"""
-    try:
-        data = request.json
-        encrypted_data_b64 = data.get('encrypted_data')
-        shared_secret = data.get('shared_secret')
-        
-        if not encrypted_data_b64 or not shared_secret:
-            return jsonify({'error': 'Encrypted data and shared secret required'}), 400
-        
-        # Decrypt
-        decrypted_data = AESCipher.decrypt(encrypted_data_b64, shared_secret)
-        
-        # Convert to base64 for JSON response
-        decrypted_b64 = base64.b64encode(decrypted_data).decode('utf-8')
-        
-        return jsonify({
-            'success': True,
-            'decrypted_data': decrypted_b64
-        })
-    
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
 
 @app.route('/api/peers', methods=['GET'])
 def get_peers():
@@ -377,11 +305,12 @@ def get_peers():
 
 if __name__ == '__main__':
     print("=" * 60)
-    print("Secure File Sharing Application with Peer Discovery")
+    print("Secure File Sharing Application with WebRTC P2P")
     print("=" * 60)
     print("Server starting on http://localhost:5000")
-    print("Encryption: AES-256-GCM")
+    print("Encryption: AES-256-GCM (Client-Side)")
     print("Key Exchange: Diffie-Hellman (2048-bit)")
     print("Peer Discovery: WebSocket (SocketIO)")
+    print("File Transfer: WebRTC DataChannel (P2P)")
     print("=" * 60)
     socketio.run(app, debug=True, host='0.0.0.0', port=5000)

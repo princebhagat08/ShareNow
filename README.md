@@ -1,106 +1,253 @@
-# Secure P2P File Sharing Application
+# Secure File Sharing - WebRTC P2P
 
-A real-time, peer-to-peer file sharing application featuring **End-to-End Encryption** (E2EE) using  AES-256-GCM and secure Diffie-Hellman key exchange.
+A peer-to-peer encrypted file sharing application using **WebRTC DataChannel** for direct file transfer with **AES-256-GCM** encryption and **Diffie-Hellman** key exchange.
 
-![Project Banner](https://img.shields.io/badge/Security-AES--256--GCM-green)
-![Python](https://img.shields.io/badge/Backend-Python%20Flask-blue)
-![SocketIO](https://img.shields.io/badge/Realtime-Socket.IO-orange)
+## 🚀 Features
 
-## 🚀 Step-by-Step Working
+- ✅ **True Peer-to-Peer**: Files transfer directly between browsers via WebRTC DataChannel
+- ✅ **End-to-End Encryption**: AES-256-GCM encryption performed client-side
+- ✅ **Secure Key Exchange**: Diffie-Hellman 2048-bit key agreement
+- ✅ **No Backend File Storage**: Backend only handles signaling and peer discovery
+- ✅ **LAN Support**: Automatic peer discovery on local networks
+- ✅ **Progress Tracking**: Real-time upload/download progress
+- ✅ **Chunked Transfer**: Efficient streaming with backpressure handling
+- ✅ **Any File Type**: Support for text, images, videos, documents, etc.
 
-### 1. Peer Discovery & Connection
-1. **Open the App**: Two users open the application on their browsers.
-2. **Select Roles**:
-   - User A selects **"Sender"** and enters their name (e.g., "Alice").
-   - User B selects **"Receiver"** and enters their name (e.g., "Bob").
-3. **Auto-Discovery**: The application uses WebSockets to automatically detect other users on the network.
-   - Alice sees Bob in her "Available Peers" list.
-4. **Connect**:
-   - Alice clicks **"Connect"** next to Bob's name.
-   - Bob receives a popup request and clicks **"Accept"**.
-   - A secure WebSocket room is established between them.
+## 🏗️ Architecture
 
-### 2. Secure Key Exchange (The Handshake)
-Once connected, the app automatically performs a **Diffie-Hellman Key Exchange** in the background.
+### Backend (Flask + Socket.IO)
+**Purpose**: Signaling server only - NO file data passes through backend
 
-1. **Key Generation**:
-   - Alice generates a private key ($a$) and public key ($A = g^a \mod p$).
-   - Bob generates a private key ($b$) and public key ($B = g^b \mod p$).
-2. **Exchange**:
-   - Alice sends her public key ($A$) to Bob.
-   - Bob sends his public key ($B$) to Alice.
-   *Note: Private keys never leave the user's device.*
-3. **Secret Derivation**:
-   - Alice computes $S = B^a \mod p$.
-   - Bob computes $S = A^b \mod p$.
-   - Both now have the **same shared secret** ($S$) without ever transmitting it.
-4. **HKDF**: The shared secret is passed through a Key Derivation Function (HKDF-SHA256) to generate a strong **256-bit AES Key**.
+- **Peer Discovery**: Register and find peers by ID
+- **Connection Management**: Handle connection requests/acceptance
+- **Diffie-Hellman**: Generate DH keys and derive shared secret
+- **WebRTC Signaling**: Exchange SDP offers/answers and ICE candidates
 
-### 3. File Encryption (Sender Side)
-When Alice selects a file and clicks "Send":
+### Frontend (WebRTC + Web Crypto API)
+**Purpose**: All file handling and encryption happens client-side
 
-1. **File Reading**: The file is read as binary data (bytes).
-2. **IV Generation**: A unique, random 12-byte **Initialization Vector (IV)** is generated.
-3. **Encryption (AES-256-GCM)**:
-   - The file data + the derived 256-bit Key + the IV are fed into the AES-GCM algorithm.
-   - **Output**: `Ciphertext` (encrypted data) + `Auth Tag` (proof of integrity).
-4. **Packaging**: The app packages `IV + Auth Tag + Ciphertext` into a single blob.
-5. **Transmission**: This encrypted blob is sent over WebSocket to Bob.
+- **WebRTC DataChannel**: Direct peer-to-peer binary transfer
+- **AES-256-GCM Encryption**: Client-side encryption using `window.crypto.subtle`
+- **Chunked Streaming**: 16KB chunks with backpressure control
+- **File Assembly**: Decrypt and reconstruct file in browser
 
-### 4. File Decryption (Receiver Side)
-When Bob receives the data:
+## 📋 Requirements
 
-1. **Unpacking**: The app separates the `IV`, `Auth Tag`, and `Ciphertext`.
-2. **Decryption (AES-256-GCM)**:
-   - Bob's browser uses the same **Shared Secret Key**, the received `IV`, and the `Auth Tag`.
-   - The algorithm verifies integrity (ensuring no tampering) and decrypts the `Ciphertext`.
-3. **Output**: The original file bytes are recovered.
-4. **Download**: The browser instantly triggers a download of the decrypted file.
+- Python 3.7+
+- Modern browser with WebRTC support (Chrome, Firefox, Edge, Safari)
+- Local network or internet connection
+
+## 🔧 Installation
+
+1. **Clone the repository**
+```bash
+git clone <repository-url>
+cd file-sharing
+```
+
+2. **Install Python dependencies**
+```bash
+pip install -r requirements.txt
+```
+
+3. **Run the server**
+```bash
+python app.py
+```
+
+4. **Open in browser**
+```
+http://localhost:5000
+```
+
+## 📖 Usage
+
+### Receiver Setup
+1. Select **"Receiver"** role
+2. Enter your name
+3. Copy your **Peer ID** (e.g., `ABC-123`)
+4. Share this ID with the sender
+
+### Sender Setup
+1. Select **"Sender"** role
+2. Enter your name
+3. Enter the receiver's **Peer ID**
+4. Click **"Search"** and **"Connect"**
+5. Wait for receiver to accept
+6. Select a file and click **"Encrypt & Send File"**
+
+### Transfer Process
+1. **Key Exchange**: Diffie-Hellman keys exchanged via backend
+2. **WebRTC Setup**: Peer connection established with ICE/STUN
+3. **DataChannel Open**: Secure P2P channel created
+4. **File Transfer**: 
+   - Sender: Read → Encrypt (AES-GCM) → Send chunks via DataChannel
+   - Receiver: Receive chunks → Decrypt → Assemble → Download
+
+## 🔒 Security
+
+### Encryption Flow
+```
+Sender Side:
+File → Read in chunks (16KB) → AES-256-GCM encrypt → WebRTC DataChannel
+
+Receiver Side:
+WebRTC DataChannel → AES-256-GCM decrypt → Assemble chunks → Download
+```
+
+### Key Exchange
+1. Both peers generate DH private/public key pairs (backend)
+2. Public keys exchanged via Socket.IO
+3. Shared secret derived using DH (backend)
+4. Shared secret sent to client and imported as `CryptoKey`
+5. AES-256-GCM encryption/decryption uses this key (client-side)
+
+### Security Features
+- **No Backend File Access**: Files never touch the server
+- **Client-Side Encryption**: Encryption happens in the browser
+- **Perfect Forward Secrecy**: New DH keys per session
+- **Authenticated Encryption**: GCM mode provides authentication
+- **Random IVs**: Each chunk uses a unique 12-byte IV
+
+## 🌐 Network Configuration
+
+### LAN (Local Network)
+Works automatically! Peers on the same WiFi/hotspot can connect directly.
+
+### Internet (Different Networks)
+Requires STUN/TURN servers. Current configuration uses Google's public STUN:
+- `stun:stun.l.google.com:19302`
+- `stun:stun1.l.google.com:19302`
+
+For better reliability across restrictive networks, add TURN servers in `app.js`:
+```javascript
+const rtcConfig = {
+    iceServers: [
+        { urls: 'stun:stun.l.google.com:19302' },
+        { 
+            urls: 'turn:your-turn-server.com:3478',
+            username: 'user',
+            credential: 'pass'
+        }
+    ]
+};
+```
+
+## 📊 Technical Details
+
+### File Transfer Specifications
+- **Chunk Size**: 16KB (configurable)
+- **Backpressure Threshold**: 16MB buffered data
+- **Encryption**: AES-256-GCM with 12-byte IV
+- **DataChannel**: Binary mode (`arraybuffer`)
+
+### Message Format
+**Metadata Message** (JSON):
+```json
+{
+    "type": "metadata",
+    "filename": "example.pdf",
+    "fileSize": 1048576,
+    "totalChunks": 64
+}
+```
+
+**Chunk Format** (Binary):
+```
+[12 bytes IV][N bytes encrypted data]
+```
+
+**Completion Message** (JSON):
+```json
+{
+    "type": "complete"
+}
+```
+
+## 🐛 Troubleshooting
+
+### Connection Issues
+- **Firewall**: Ensure UDP ports are open for WebRTC
+- **Browser**: Use latest Chrome/Firefox/Edge
+- **Network**: Check if both peers can reach STUN servers
+
+### Transfer Failures
+- **Large Files**: Browser memory limits may affect very large files (>1GB)
+- **Slow Networks**: Increase backpressure threshold if needed
+- **Disconnections**: WebRTC will fail if network changes mid-transfer
+
+### Debugging
+Open browser console (F12) to see:
+- WebRTC connection state
+- ICE candidate gathering
+- DataChannel status
+- Transfer progress logs
+
+## 📝 API Reference
+
+### Socket.IO Events
+
+#### Client → Server
+- `register_peer`: Register on network
+- `find_peer`: Search for peer by ID
+- `send_connection_request`: Request connection
+- `accept_connection`: Accept connection request
+- `send_public_key`: Send DH public key
+- `offer`: Send WebRTC SDP offer
+- `answer`: Send WebRTC SDP answer
+- `ice_candidate`: Send ICE candidate
+
+#### Server → Client
+- `peers_updated`: Peer list changed
+- `peer_found`: Peer search result
+- `connection_request`: Incoming connection request
+- `connection_accepted`: Connection accepted
+- `receive_public_key`: Received DH public key
+- `offer`: Received WebRTC offer
+- `answer`: Received WebRTC answer
+- `ice_candidate`: Received ICE candidate
+
+### REST API
+
+#### `POST /api/keys/generate`
+Generate Diffie-Hellman key pair
+```json
+Request: { "session_id": "ABC-123" }
+Response: { "success": true, "public_key": "-----BEGIN PUBLIC KEY-----..." }
+```
+
+#### `POST /api/keys/derive`
+Derive shared secret from peer's public key
+```json
+Request: { "session_id": "ABC-123", "peer_public_key": "-----BEGIN PUBLIC KEY-----..." }
+Response: { "success": true, "shared_secret": "base64_encoded_secret" }
+```
+
+## 🔄 Migration from Backend Streaming
+
+This version migrates from backend file streaming to WebRTC P2P:
+
+### What Changed
+- ❌ Removed: `/api/files/encrypt` and `/api/files/decrypt` endpoints
+- ❌ Removed: Backend file chunk forwarding via Socket.IO
+- ✅ Added: WebRTC signaling (offer/answer/ICE)
+- ✅ Added: Client-side encryption using Web Crypto API
+- ✅ Added: DataChannel binary streaming
+
+### What Stayed
+- ✅ Peer discovery and registration
+- ✅ Diffie-Hellman key exchange
+- ✅ Connection request/accept flow
+- ✅ UI/UX and progress tracking
+
+## 📄 License
+
+MIT License - Feel free to use and modify!
+
+## 🤝 Contributing
+
+Contributions welcome! Please test thoroughly before submitting PRs.
 
 ---
 
-## 🔐 Technical Deep Dive
-
-### 1. Diffie-Hellman Key Exchange (The "Magic")
-How can two people agree on a secret password over a public room without anyone else knowing it?
-
-- **Analogy**:
-    - Alice and Bob agree on a common paint color (Yellow).
-    - Alice picks a secret color (Red) and mixes it with Yellow → Orange. She sends Orange to Bob.
-    - Bob picks a secret color (Blue) and mixes it with Yellow → Green. He sends Green to Alice.
-    - **The Trick**:
-        - Alice takes Bob's Green + adds her Red → Brown.
-        - Bob takes Alice's Orange + adds his Blue → Brown.
-    - Result: Both have the **same final color (Brown)**, but an eavesdropper only saw Orange and Green and can't un-mix them to find the secret Red or Blue.
-
-- **In Code (`crypto_engine.py`)**:
-    We use the **RFC 3526 2048-bit MODP Group**, which is a standard, secure set of numbers for this math.
-
-### 2. AES-256-GCM (The "Vault")
-- **AES (Advanced Encryption Standard)**: The standard used by governments and banks. "256" means the key is 256 bits long (extremely hard to brute force).
-- **GCM (Galois/Counter Mode)**: This is a modern "mode" of AES that provides two things:
-    1. **Confidentiality**: Scrambles the data so it's unreadable.
-    2. **Integrity (Authentication)**: Ensures that if an attacker modifies even 1 bit of the encrypted file during transit, the decryption will completely fail (instead of producing a corrupted file).
-
----
-
-## 🛠️ Installation & Usage
-
-1. **Install Dependencies**:
-   ```bash
-   pip install -r requirements.txt
-   ```
-2. **Start Server**:
-   ```bash
-   python app.py
-   ```
-3. **Access**:
-   - Open `http://localhost:5000` on your browser.
-   - For other devices on the network, use your IP: `http://192.168.x.x:5000`
-
-## 📁 Project Structure
-
-- `app.py`: Flask server + WebSocket logic. Handles peer connections and relays encrypted data.
-- `crypto_engine.py`: Handles all the heavy lifting: generating keys, deriving secrets, and AES encryption.
-- `static/app.js`: Frontend logic. Manages UI state, WebSocket events, and API calls.
-- `templates/index.html`: The user interface.
+**Built with ❤️ using Flask, Socket.IO, WebRTC, and Web Crypto API**

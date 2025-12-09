@@ -1,12 +1,11 @@
 /**
  * Secure File Sharing P2P - Frontend Application
- * WebSocket-based peer discovery and file transfer
+ * WebRTC DataChannel-based peer-to-peer file transfer with client-side encryption
  */
 
 // Initialize Socket.IO
 const socket = io();
 
-// Application state
 // Generate simple peer ID (e.g., ABC-123)
 function generateSimplePeerId() {
     const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
@@ -34,15 +33,31 @@ const state = {
     sessionId: null,
     publicKey: null,
     sharedSecret: null,
+    cryptoKey: null, // Web Crypto API key
     connectedPeer: null,
     pendingRequest: null,
     selectedFile: null,
     isConnected: false,
+
+    // WebRTC
+    peerConnection: null,
+    dataChannel: null,
+
+    // File receiving
     receivingFile: {
         chunks: [],
         totalChunks: 0,
-        filename: null
+        filename: null,
+        fileSize: 0
     }
+};
+
+// WebRTC Configuration
+const rtcConfig = {
+    iceServers: [
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'stun:stun1.l.google.com:19302' }
+    ]
 };
 
 // ==================== Screen Navigation ====================
@@ -114,7 +129,6 @@ socket.on('disconnect', () => {
 
 socket.on('peers_updated', (data) => {
     console.log('Peers updated:', data.peers);
-    // Disabled auto-discovery - peers are now found manually
 });
 
 socket.on('connection_request', (data) => {
@@ -136,11 +150,6 @@ socket.on('receive_public_key', (data) => {
     handleReceivedPublicKey(data.public_key);
 });
 
-socket.on('receive_encrypted_file', (data) => {
-    console.log('Received encrypted file');
-    handleReceivedFile(data.encrypted_data, data.filename);
-});
-
 socket.on('peer_found', (data) => {
     console.log('Peer found:', data);
     displayFoundPeer(data);
@@ -156,19 +165,48 @@ socket.on('peer_not_found', () => {
     `;
 });
 
-socket.on('receive_file_chunk', (data) => {
-    handleFileChunk(data);
+// ==================== WebRTC Signaling Events ====================
+
+socket.on('offer', async (data) => {
+    console.log('Received WebRTC offer from:', data.from_peer_id);
+    try {
+        await setupWebRTCConnection(false); // Receiver
+        await state.peerConnection.setRemoteDescription(new RTCSessionDescription(data.offer));
+        const answer = await state.peerConnection.createAnswer();
+        await state.peerConnection.setLocalDescription(answer);
+
+        socket.emit('answer', {
+            target_peer_id: data.from_peer_id,
+            answer: answer,
+            sender_peer_id: state.peerId
+        });
+
+        console.log('Sent WebRTC answer');
+    } catch (error) {
+        console.error('Error handling offer:', error);
+        addLog('Failed to establish WebRTC connection', 'error');
+    }
 });
 
-socket.on('receive_file_complete', (data) => {
-    handleFileComplete(data);
+socket.on('answer', async (data) => {
+    console.log('Received WebRTC answer from:', data.from_peer_id);
+    try {
+        await state.peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
+        console.log('WebRTC answer processed');
+    } catch (error) {
+        console.error('Error handling answer:', error);
+    }
 });
 
-socket.on('file_preparation_started', (data) => {
-    console.log('Sender is preparing file:', data.filename);
-    addLog(`Sender is preparing file: ${data.filename}`);
-    showProgress('Sender is encrypting file...', 0);
-    updateStatusIcon('encryption-icon', 'pending');
+socket.on('ice_candidate', async (data) => {
+    console.log('Received ICE candidate from:', data.from_peer_id);
+    try {
+        if (data.candidate && state.peerConnection) {
+            await state.peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
+        }
+    } catch (error) {
+        console.error('Error adding ICE candidate:', error);
+    }
 });
 
 // ==================== Peer Management ====================
@@ -196,7 +234,6 @@ function updateConnectionStatus(status) {
     }
 }
 
-// Copy Peer ID function
 function copyPeerId() {
     const peerId = state.peerId;
     navigator.clipboard.writeText(peerId).then(() => {
@@ -212,7 +249,6 @@ function copyPeerId() {
     });
 }
 
-// Search for peer by ID
 function searchPeer() {
     const searchInput = document.getElementById('peer-search-input');
     const targetPeerId = searchInput.value.trim();
@@ -227,15 +263,12 @@ function searchPeer() {
         return;
     }
 
-    // Clear previous results
     const searchResult = document.getElementById('search-result');
     searchResult.innerHTML = '<div class="empty-state"><p>Searching...</p></div>';
 
-    // Emit search request
     socket.emit('find_peer', { target_peer_id: targetPeerId });
 }
 
-// Display found peer
 function displayFoundPeer(peer) {
     const searchResult = document.getElementById('search-result');
     searchResult.innerHTML = `
@@ -265,8 +298,6 @@ function sendConnectionRequest(targetPeerId, targetName) {
     });
 
     addLog(`Sent connection request to ${targetName}`);
-
-    // Show alert to user
     alert(`Connection request sent to ${targetName}!\nWaiting for them to accept...`);
 }
 
@@ -289,8 +320,7 @@ function acceptConnection() {
         accepter_peer_id: state.peerId
     });
 
-    // Get peer name from peers list
-    const peerName = 'Peer'; // We'll get this from the request
+    const peerName = 'Peer';
     establishConnection(state.pendingRequest, peerName);
 }
 
@@ -330,18 +360,121 @@ function establishConnection(peerId, peerName) {
 }
 
 function disconnectPeer() {
+    // Close WebRTC connection
+    if (state.dataChannel) {
+        state.dataChannel.close();
+        state.dataChannel = null;
+    }
+    if (state.peerConnection) {
+        state.peerConnection.close();
+        state.peerConnection = null;
+    }
+
     state.connectedPeer = null;
     state.isConnected = false;
     state.sharedSecret = null;
+    state.cryptoKey = null;
 
     // Show peer discovery, hide file transfer
     document.getElementById('peer-discovery-panel').style.display = 'block';
     document.getElementById('file-transfer-panel').style.display = 'none';
 
-    // Reset status icons
     resetStatusIcons();
-
     addLog('Disconnected from peer');
+}
+
+// ==================== WebRTC Setup ====================
+
+async function setupWebRTCConnection(isInitiator) {
+    try {
+        console.log('Setting up WebRTC connection, isInitiator:', isInitiator);
+
+        state.peerConnection = new RTCPeerConnection(rtcConfig);
+
+        // Handle ICE candidates
+        state.peerConnection.onicecandidate = (event) => {
+            if (event.candidate) {
+                console.log('Sending ICE candidate');
+                socket.emit('ice_candidate', {
+                    target_peer_id: state.connectedPeer,
+                    candidate: event.candidate,
+                    sender_peer_id: state.peerId
+                });
+            }
+        };
+
+        // Monitor connection state
+        state.peerConnection.onconnectionstatechange = () => {
+            console.log('WebRTC connection state:', state.peerConnection.connectionState);
+            if (state.peerConnection.connectionState === 'connected') {
+                addLog('WebRTC peer-to-peer connection established!', 'success');
+            } else if (state.peerConnection.connectionState === 'failed') {
+                addLog('WebRTC connection failed', 'error');
+            }
+        };
+
+        state.peerConnection.oniceconnectionstatechange = () => {
+            console.log('ICE connection state:', state.peerConnection.iceConnectionState);
+        };
+
+        if (isInitiator) {
+            // Sender creates the data channel
+            state.dataChannel = state.peerConnection.createDataChannel('fileTransfer');
+            setupDataChannel(state.dataChannel);
+
+            // Create and send offer
+            const offer = await state.peerConnection.createOffer();
+            await state.peerConnection.setLocalDescription(offer);
+
+            socket.emit('offer', {
+                target_peer_id: state.connectedPeer,
+                offer: offer,
+                sender_peer_id: state.peerId
+            });
+
+            console.log('Sent WebRTC offer');
+        } else {
+            // Receiver waits for data channel
+            state.peerConnection.ondatachannel = (event) => {
+                console.log('Received data channel');
+                state.dataChannel = event.channel;
+                setupDataChannel(state.dataChannel);
+            };
+        }
+
+    } catch (error) {
+        console.error('Error setting up WebRTC:', error);
+        addLog('Failed to setup WebRTC connection', 'error');
+    }
+}
+
+function setupDataChannel(channel) {
+    channel.binaryType = 'arraybuffer';
+
+    channel.onopen = () => {
+        console.log('DataChannel opened');
+        addLog('Secure data channel established', 'success');
+        updateStatusIcon('transfer-icon', 'success');
+
+        // Enable file sending if sender
+        if (state.userRole === 'sender') {
+            document.getElementById('send-file-btn').disabled = false;
+        }
+    };
+
+    channel.onclose = () => {
+        console.log('DataChannel closed');
+        addLog('Data channel closed');
+    };
+
+    channel.onerror = (error) => {
+        console.error('DataChannel error:', error);
+        addLog('Data channel error', 'error');
+    };
+
+    channel.onmessage = async (event) => {
+        await handleDataChannelMessage(event.data);
+    };
 }
 
 // ==================== Cryptography ====================
@@ -369,7 +502,6 @@ function exchangePublicKeys() {
         return;
     }
 
-    // Send our public key to peer
     socket.emit('send_public_key', {
         target_peer_id: state.connectedPeer,
         public_key: state.publicKey,
@@ -397,18 +529,54 @@ async function handleReceivedPublicKey(peerPublicKey) {
         const result = await response.json();
         state.sharedSecret = result.shared_secret;
 
+        // Import shared secret as CryptoKey for Web Crypto API
+        const keyData = base64ToArrayBuffer(state.sharedSecret);
+        state.cryptoKey = await window.crypto.subtle.importKey(
+            'raw',
+            keyData,
+            { name: 'AES-GCM' },
+            false,
+            ['encrypt', 'decrypt']
+        );
+
         addLog('Shared secret derived successfully', 'success');
         updateStatusIcon('key-exchange-icon', 'success');
 
-        // Enable file sending if sender
+        // Setup WebRTC connection after key exchange
         if (state.userRole === 'sender') {
-            document.getElementById('send-file-btn').disabled = false;
+            await setupWebRTCConnection(true); // Sender initiates
+        } else {
+            // Receiver will setup when offer arrives
         }
+
     } catch (error) {
         console.error('Error deriving secret:', error);
         addLog('Failed to derive shared secret', 'error');
         updateStatusIcon('key-exchange-icon', 'error');
     }
+}
+
+// ==================== Client-Side Encryption ====================
+
+async function encryptChunk(chunk) {
+    const iv = window.crypto.getRandomValues(new Uint8Array(12)); // 12 bytes for GCM
+    const encrypted = await window.crypto.subtle.encrypt(
+        { name: 'AES-GCM', iv: iv },
+        state.cryptoKey,
+        chunk
+    );
+
+    return { iv, data: new Uint8Array(encrypted) };
+}
+
+async function decryptChunk(iv, encryptedData) {
+    const decrypted = await window.crypto.subtle.decrypt(
+        { name: 'AES-GCM', iv: iv },
+        state.cryptoKey,
+        encryptedData
+    );
+
+    return new Uint8Array(decrypted);
 }
 
 // ==================== File Handling ====================
@@ -460,45 +628,74 @@ function handleFileSelect(file) {
 }
 
 async function sendFile() {
-    if (!state.selectedFile || !state.sharedSecret || !state.connectedPeer) {
-        alert('Please select a file and ensure connection is established');
+    if (!state.selectedFile || !state.cryptoKey || !state.dataChannel) {
+        alert('Please ensure connection is established and file is selected');
+        return;
+    }
+
+    if (state.dataChannel.readyState !== 'open') {
+        alert('Data channel is not ready. Please wait...');
         return;
     }
 
     try {
         const button = document.getElementById('send-file-btn');
         button.disabled = true;
-
-        // Notify receiver that we're preparing the file
-        socket.emit('notify_file_preparation', {
-            target_peer_id: state.connectedPeer,
-            filename: state.selectedFile.name
-        });
-
-        button.innerHTML = '<span class="btn-icon">⏳</span> Encrypting...';
+        button.innerHTML = '<span class="btn-icon">⏳</span> Encrypting & Sending...';
 
         updateStatusIcon('encryption-icon', 'pending');
-        addLog('Encrypting file...');
-        showProgress('Encrypting file...', 0);
+        addLog('Starting file transfer...');
+        showProgress('Preparing file...', 0);
 
-        // Encrypt file with progress tracking
-        const formData = new FormData();
-        formData.append('file', state.selectedFile);
-        formData.append('shared_secret', state.sharedSecret);
+        const file = state.selectedFile;
+        const CHUNK_SIZE = 16 * 1024; // 16KB chunks
+        const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
 
-        const result = await uploadWithProgress('/api/files/encrypt', formData, (progress) => {
-            updateProgress('Encrypting...', progress);
-        });
+        // Send file metadata first
+        const metadata = {
+            type: 'metadata',
+            filename: file.name,
+            fileSize: file.size,
+            totalChunks: totalChunks
+        };
+        state.dataChannel.send(JSON.stringify(metadata));
+        addLog(`Sending ${file.name} (${totalChunks} chunks)`);
+
+        // Read and send file in chunks
+        let offset = 0;
+        let chunkIndex = 0;
+
+        while (offset < file.size) {
+            const chunk = file.slice(offset, offset + CHUNK_SIZE);
+            const arrayBuffer = await chunk.arrayBuffer();
+
+            // Encrypt chunk
+            const { iv, data } = await encryptChunk(arrayBuffer);
+
+            // Combine IV + encrypted data
+            const combined = new Uint8Array(iv.length + data.length);
+            combined.set(iv, 0);
+            combined.set(data, iv.length);
+
+            // Wait for buffer to drain if needed
+            while (state.dataChannel.bufferedAmount > 16 * 1024 * 1024) { // 16MB threshold
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+
+            // Send encrypted chunk
+            state.dataChannel.send(combined);
+
+            chunkIndex++;
+            offset += CHUNK_SIZE;
+
+            const progress = (chunkIndex / totalChunks) * 100;
+            updateProgress(`Sending... (${chunkIndex}/${totalChunks})`, progress);
+        }
+
+        // Send completion signal
+        state.dataChannel.send(JSON.stringify({ type: 'complete' }));
 
         updateStatusIcon('encryption-icon', 'success');
-        addLog('File encrypted successfully', 'success');
-
-        // Send encrypted file in chunks
-        updateStatusIcon('transfer-icon', 'pending');
-        addLog('Sending encrypted file to peer...');
-
-        await sendFileInChunks(result.encrypted_data, state.selectedFile.name);
-
         updateStatusIcon('transfer-icon', 'success');
         addLog('File sent successfully!', 'success');
         hideProgress();
@@ -511,121 +708,77 @@ async function sendFile() {
 
     } catch (error) {
         console.error('Error sending file:', error);
-        addLog('Failed to send file', 'error');
+        addLog('Failed to send file: ' + error.message, 'error');
         updateStatusIcon('encryption-icon', 'error');
         updateStatusIcon('transfer-icon', 'error');
         hideProgress();
+
+        const button = document.getElementById('send-file-btn');
+        button.innerHTML = '<span class="btn-icon">🚀</span> Encrypt & Send File';
+        button.disabled = false;
     }
 }
 
-// Upload with progress tracking
-function uploadWithProgress(url, formData, onProgress) {
-    return new Promise((resolve, reject) => {
-        const xhr = new XMLHttpRequest();
+// ==================== File Receiving ====================
 
-        xhr.upload.addEventListener('progress', (e) => {
-            if (e.lengthComputable) {
-                const progress = (e.loaded / e.total) * 100;
-                onProgress(progress);
-            }
-        });
-
-        xhr.addEventListener('load', () => {
-            if (xhr.status === 200) {
-                resolve(JSON.parse(xhr.responseText));
-            } else {
-                reject(new Error('Upload failed'));
-            }
-        });
-
-        xhr.addEventListener('error', () => reject(new Error('Upload failed')));
-
-        xhr.open('POST', url);
-        xhr.send(formData);
-    });
-}
-
-// Send file in chunks
-async function sendFileInChunks(encryptedData, filename) {
-    const CHUNK_SIZE = 64 * 1024; // 64KB chunks
-    const totalSize = encryptedData.length;
-    const totalChunks = Math.ceil(totalSize / CHUNK_SIZE);
-
-    for (let i = 0; i < totalChunks; i++) {
-        const start = i * CHUNK_SIZE;
-        const end = Math.min(start + CHUNK_SIZE, totalSize);
-        const chunk = encryptedData.substring(start, end);
-
-        socket.emit('send_file_chunk', {
-            target_peer_id: state.connectedPeer,
-            chunk_data: chunk,
-            chunk_index: i,
-            total_chunks: totalChunks,
-            filename: filename
-        });
-
-        const progress = ((i + 1) / totalChunks) * 100;
-        updateProgress('Sending file...', progress);
-
-        // Small delay to prevent overwhelming the socket
-        await new Promise(resolve => setTimeout(resolve, 10));
-    }
-
-    // Notify completion
-    socket.emit('send_file_complete', {
-        target_peer_id: state.connectedPeer,
-        filename: filename
-    });
-}
-
-// Handle file chunk reception
-function handleFileChunk(data) {
-    const { chunk_data, chunk_index, total_chunks, filename } = data;
-
-    // Initialize if first chunk
-    if (chunk_index === 0) {
-        state.receivingFile.chunks = [];
-        state.receivingFile.totalChunks = total_chunks;
-        state.receivingFile.filename = filename;
-        addLog(`Receiving file: ${filename}`);
-        updateStatusIcon('transfer-icon', 'pending');
-        showProgress('Receiving file...', 0);
-    }
-
-    // Store chunk
-    state.receivingFile.chunks[chunk_index] = chunk_data;
-
-    // Update progress
-    const progress = ((chunk_index + 1) / total_chunks) * 100;
-    updateProgress('Receiving file...', progress);
-    addLog(`Received chunk ${chunk_index + 1}/${total_chunks}`);
-}
-
-// Handle file transfer completion
-async function handleFileComplete(data) {
+async function handleDataChannelMessage(data) {
     try {
-        const { filename } = data;
+        // Check if it's a JSON message (metadata or control)
+        if (typeof data === 'string' || data instanceof String) {
+            const message = JSON.parse(data);
 
-        // Combine all chunks
-        const encryptedData = state.receivingFile.chunks.join('');
+            if (message.type === 'metadata') {
+                // Initialize file reception
+                state.receivingFile = {
+                    chunks: [],
+                    totalChunks: message.totalChunks,
+                    filename: message.filename,
+                    fileSize: message.fileSize
+                };
 
+                addLog(`Receiving file: ${message.filename}`);
+                updateStatusIcon('transfer-icon', 'pending');
+                updateStatusIcon('encryption-icon', 'pending');
+                showProgress('Receiving file...', 0);
+
+            } else if (message.type === 'complete') {
+                // File transfer complete
+                await finalizeFileReception();
+            }
+        } else {
+            // Binary data - encrypted chunk
+            const combined = new Uint8Array(data);
+            const iv = combined.slice(0, 12);
+            const encryptedData = combined.slice(12);
+
+            // Decrypt chunk
+            const decryptedChunk = await decryptChunk(iv, encryptedData);
+            state.receivingFile.chunks.push(decryptedChunk);
+
+            const progress = (state.receivingFile.chunks.length / state.receivingFile.totalChunks) * 100;
+            updateProgress(`Receiving... (${state.receivingFile.chunks.length}/${state.receivingFile.totalChunks})`, progress);
+        }
+    } catch (error) {
+        console.error('Error handling data channel message:', error);
+        addLog('Error receiving file chunk', 'error');
+    }
+}
+
+async function finalizeFileReception() {
+    try {
         addLog('File received completely');
         updateStatusIcon('transfer-icon', 'success');
-        updateStatusIcon('encryption-icon', 'pending');
-        updateProgress('Decrypting file...', 0);
-        addLog('Decrypting file...');
+        updateProgress('Decrypting...', 100);
 
-        // Decrypt file
-        const response = await fetch('/api/files/decrypt', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                encrypted_data: encryptedData,
-                shared_secret: state.sharedSecret
-            })
-        });
+        // Combine all decrypted chunks
+        const totalSize = state.receivingFile.chunks.reduce((sum, chunk) => sum + chunk.length, 0);
+        const fileData = new Uint8Array(totalSize);
+        let offset = 0;
 
-        const result = await response.json();
+        for (const chunk of state.receivingFile.chunks) {
+            fileData.set(chunk, offset);
+            offset += chunk.length;
+        }
 
         updateStatusIcon('encryption-icon', 'success');
         addLog('File decrypted successfully!', 'success');
@@ -633,95 +786,41 @@ async function handleFileComplete(data) {
 
         setTimeout(() => hideProgress(), 2000);
 
-        // Show download button
+        // Create download button
+        const blob = new Blob([fileData]);
+        const url = URL.createObjectURL(blob);
+
         const receivedFileInfo = document.getElementById('received-file-info');
         receivedFileInfo.innerHTML = `
             <div class="file-info active">
-                <strong>Received File:</strong> ${filename}<br>
+                <strong>Received File:</strong> ${state.receivingFile.filename}<br>
+                <strong>Size:</strong> ${(state.receivingFile.fileSize / 1024).toFixed(2)} KB<br>
                 <strong>Status:</strong> Decrypted and ready to download
             </div>
-            <button class="btn btn-primary btn-block" onclick="downloadDecryptedFile('${result.decrypted_data}', '${filename}')">
+            <button class="btn btn-primary btn-block" onclick="downloadFile('${url}', '${state.receivingFile.filename}')">
                 <span class="btn-icon">💾</span>
-                Download ${filename}
+                Download ${state.receivingFile.filename}
             </button>
         `;
         receivedFileInfo.style.display = 'block';
 
         // Reset receiving state
-        state.receivingFile = { chunks: [], totalChunks: 0, filename: null };
+        state.receivingFile = { chunks: [], totalChunks: 0, filename: null, fileSize: 0 };
 
     } catch (error) {
-        console.error('Error decrypting file:', error);
-        addLog('Failed to decrypt file', 'error');
+        console.error('Error finalizing file reception:', error);
+        addLog('Failed to process received file', 'error');
         updateStatusIcon('encryption-icon', 'error');
         hideProgress();
     }
 }
 
-// Legacy handler for backward compatibility
-async function handleReceivedFile(encryptedData, filename) {
-    try {
-        addLog('Received encrypted file');
-        updateStatusIcon('transfer-icon', 'success');
-        updateStatusIcon('encryption-icon', 'pending');
-        addLog('Decrypting file...');
-        showProgress('Decrypting file...', 0);
-
-        // Decrypt file
-        const response = await fetch('/api/files/decrypt', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                encrypted_data: encryptedData,
-                shared_secret: state.sharedSecret
-            })
-        });
-
-        const result = await response.json();
-
-        updateStatusIcon('encryption-icon', 'success');
-        addLog('File decrypted successfully!', 'success');
-        updateProgress('Complete!', 100);
-        setTimeout(() => hideProgress(), 2000);
-
-        // Show download button
-        const receivedFileInfo = document.getElementById('received-file-info');
-        receivedFileInfo.innerHTML = `
-            <div class="file-info active">
-                <strong>Received File:</strong> ${filename}<br>
-                <strong>Status:</strong> Decrypted and ready to download
-            </div>
-            <button class="btn btn-primary btn-block" onclick="downloadDecryptedFile('${result.decrypted_data}', '${filename}')">
-                <span class="btn-icon">💾</span>
-                Download ${filename}
-            </button>
-        `;
-        receivedFileInfo.style.display = 'block';
-
-    } catch (error) {
-        console.error('Error decrypting file:', error);
-        addLog('Failed to decrypt file', 'error');
-        updateStatusIcon('encryption-icon', 'error');
-        hideProgress();
-    }
-}
-
-function downloadDecryptedFile(decryptedDataB64, filename) {
-    // Convert base64 to binary
-    const binaryString = atob(decryptedDataB64);
-    const bytes = new Uint8Array(binaryString.length);
-    for (let i = 0; i < binaryString.length; i++) {
-        bytes[i] = binaryString.charCodeAt(i);
-    }
-
-    const blob = new Blob([bytes]);
-    const url = URL.createObjectURL(blob);
+function downloadFile(url, filename) {
     const a = document.createElement('a');
     a.href = url;
     a.download = filename;
     a.click();
     URL.revokeObjectURL(url);
-
     addLog(`Downloaded: ${filename}`, 'success');
 }
 
@@ -764,7 +863,6 @@ function addLog(message, type = 'info') {
     logElement.scrollTop = logElement.scrollHeight;
 }
 
-// Progress bar functions
 function showProgress(label, progress) {
     const container = document.getElementById('progress-container');
     const progressLabel = document.getElementById('progress-label');
@@ -792,14 +890,25 @@ function hideProgress() {
     container.style.display = 'none';
 }
 
-// Attach send file function to button
+// ==================== Utility Functions ====================
+
+function base64ToArrayBuffer(base64) {
+    const binaryString = atob(base64);
+    const bytes = new Uint8Array(binaryString.length);
+    for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+    }
+    return bytes.buffer;
+}
+
+// ==================== Event Listeners ====================
+
 document.addEventListener('DOMContentLoaded', () => {
     const sendBtn = document.getElementById('send-file-btn');
     if (sendBtn) {
         sendBtn.addEventListener('click', sendFile);
     }
 
-    // Add Enter key support for peer search
     const searchInput = document.getElementById('peer-search-input');
     if (searchInput) {
         searchInput.addEventListener('keypress', (e) => {
@@ -810,5 +919,5 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-console.log('Secure File Sharing P2P Application Loaded');
+console.log('Secure File Sharing P2P Application Loaded (WebRTC DataChannel)');
 console.log('Peer ID:', state.peerId);
