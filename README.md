@@ -40,7 +40,7 @@ A peer-to-peer encrypted file sharing application using **WebRTC DataChannel** f
 
 1. **Clone the repository**
 ```bash
-git clone [<repository-url>](https://github.com/princebhagat08/ShareNow)
+git clone https://github.com/princebhagat08/ShareNow
 cd file-sharing
 ```
 
