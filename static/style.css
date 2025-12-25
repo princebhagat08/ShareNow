@@ -1,23 +1,23 @@
 /* ===== CSS Variables ===== */
 :root {
-    --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    --secondary-gradient: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-    --success-gradient: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    --primary-gradient: linear-gradient(135deg, #ffffff 0%, #cccccc 100%);
+    --secondary-gradient: linear-gradient(135deg, #333333 0%, #111111 100%);
+    --success-gradient: linear-gradient(135deg, #333333 0%, #000000 100%);
 
-    --bg-primary: #0a0e27;
-    --bg-secondary: #151932;
-    --bg-tertiary: #1e2139;
-    --bg-card: rgba(30, 33, 57, 0.6);
+    --bg-primary: #000000;
+    --bg-secondary: #0a0a0a;
+    --bg-tertiary: #141414;
+    --bg-card: rgba(20, 20, 20, 0.8);
 
     --text-primary: #ffffff;
-    --text-secondary: #a0aec0;
-    --text-muted: #718096;
+    --text-secondary: #d1d5db;
+    --text-muted: #9ca3af;
 
-    --border-color: rgba(255, 255, 255, 0.1);
-    --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.2);
-    --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.3);
-    --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.4);
-    --shadow-glow: 0 0 40px rgba(102, 126, 234, 0.3);
+    --border-color: rgba(255, 255, 255, 0.15);
+    --shadow-sm: 0 2px 8px rgba(255, 255, 255, 0.05);
+    --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.5);
+    --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.8);
+    --shadow-glow: 0 0 40px rgba(255, 255, 255, 0.1);
 
     --radius-sm: 8px;
     --radius-md: 12px;
@@ -49,8 +49,8 @@ body {
     width: 100%;
     height: 100%;
     background:
-        radial-gradient(circle at 20% 20%, rgba(102, 126, 234, 0.15) 0%, transparent 50%),
-        radial-gradient(circle at 80% 80%, rgba(118, 75, 162, 0.15) 0%, transparent 50%);
+        radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.03) 0%, transparent 50%),
+        radial-gradient(circle at 80% 80%, rgba(255, 255, 255, 0.03) 0%, transparent 50%);
     pointer-events: none;
     z-index: 0;
 }
@@ -65,7 +65,7 @@ body {
 .header {
     position: sticky;
     top: 0;
-    background: rgba(10, 14, 39, 0.8);
+    background: rgba(10, 10, 10, 0.8);
     backdrop-filter: blur(20px);
     border-bottom: 1px solid var(--border-color);
     padding: 20px 0;
@@ -185,7 +185,7 @@ body {
 .role-card:hover {
     transform: translateY(-8px);
     box-shadow: var(--shadow-lg), var(--shadow-glow);
-    border-color: rgba(102, 126, 234, 0.5);
+    border-color: rgba(255, 255, 255, 0.3);
 }
 
 .role-icon {
@@ -196,15 +196,18 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    color: white;
+    justify-content: center;
+    /* color removed, set by specific gradient class */
 }
 
 .sender-gradient {
     background: var(--primary-gradient);
+    color: #000000;
 }
 
 .receiver-gradient {
     background: var(--secondary-gradient);
+    color: #ffffff;
 }
 
 .role-card h3 {
@@ -243,8 +246,8 @@ body {
 
 .name-input:focus {
     outline: none;
-    border-color: #667eea;
-    box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+    border-color: #ffffff;
+    box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.1);
 }
 
 .name-input::placeholder {
@@ -280,7 +283,7 @@ body {
     justify-content: center;
     font-size: 24px;
     font-weight: 700;
-    color: white;
+    color: #000000;
 }
 
 .user-info h3 {
@@ -359,16 +362,18 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    color: white;
     flex-shrink: 0;
+    /* color removed from base class */
 }
 
 .discovery-icon {
     background: var(--success-gradient);
+    color: #ffffff;
 }
 
 .transfer-icon {
     background: var(--primary-gradient);
+    color: #000000;
 }
 
 .panel-title {
@@ -426,7 +431,7 @@ body {
 }
 
 .peer-item:hover {
-    border-color: rgba(102, 126, 234, 0.5);
+    border-color: rgba(255, 255, 255, 0.3);
     transform: translateX(4px);
 }
 
@@ -446,7 +451,7 @@ body {
     justify-content: center;
     font-size: 16px;
     font-weight: 700;
-    color: white;
+    color: #000000;
 }
 
 .peer-details h4 {
@@ -521,8 +526,8 @@ body {
 
 .peer-search-input:focus {
     outline: none;
-    border-color: #667eea;
-    box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+    border-color: #ffffff;
+    box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.1);
 }
 
 .peer-search-input::placeholder {
@@ -561,7 +566,7 @@ body {
     border-radius: 4px;
     width: 0%;
     transition: width 0.3s ease;
-    box-shadow: 0 0 10px rgba(102, 126, 234, 0.5);
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
 }
 
 .progress-text {
@@ -607,8 +612,8 @@ body {
 }
 
 .file-upload-area:hover {
-    border-color: #667eea;
-    background: rgba(102, 126, 234, 0.05);
+    border-color: #ffffff;
+    background: rgba(255, 255, 255, 0.05);
 }
 
 .file-upload-area svg {
@@ -727,7 +732,7 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    color: white;
+    color: #000000;
 }
 
 .modal-content h3 {
@@ -772,7 +777,7 @@ body {
 
 .btn-primary {
     background: var(--primary-gradient);
-    color: white;
+    color: #000000;
     box-shadow: var(--shadow-sm);
 }
 
@@ -789,7 +794,7 @@ body {
 
 .btn-secondary:hover:not(:disabled) {
     background: var(--bg-secondary);
-    border-color: rgba(102, 126, 234, 0.5);
+    border-color: rgba(255, 255, 255, 0.3);
 }
 
 .btn-block {
@@ -925,9 +930,11 @@ body {
     .section-title {
         font-size: 24px;
     }
+
     .role-card h3 {
         font-size: 22px;
     }
+
     .role-card p {
         font-size: 14px;
     }
