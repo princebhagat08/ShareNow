@@ -1,38 +1,45 @@
 /* ===== CSS Variables (Light Theme) ===== */
 :root {
-    /* Modern Palette */
-    --primary-gradient: linear-gradient(135deg, #06b6d4 0%, #7c3aed 100%);
-    /* Cyan to Purple (Darker for Contrast) */
-    --secondary-gradient: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+    /* Modern Palette - Teal Theme */
+    --primary-color: #006d77;
+    --primary-color: #006d77;
+    --primary-gradient: #006d77;
+    --secondary-gradient: #edf7f9;
 
-    --bg-primary: #f8fafc;
-    /* Slate 50 */
-    --surface-glass: rgba(255, 255, 255, 0.7);
-    --surface-glass-hover: rgba(255, 255, 255, 0.9);
+    --bg-primary: #f4fbfb;
+    /* Light Teal/White */
+    --surface-glass: rgba(255, 255, 255, 0.9);
+    --surface-glass-hover: #ffffff;
 
-    --text-primary: #0f172a;
-    /* Slate 900 */
-    --text-secondary: #475569;
-    /* Slate 600 */
-    --text-muted: #94a3b8;
-    /* Slate 400 */
+    --text-primary: #000000;
+    --text-secondary: #333333;
+    --text-muted: #666666;
 
-    --accent-cyan: #06b6d4;
-    --accent-purple: #7c3aed;
-    --accent-pink: #ec4899;
+    --accent-cyan: #006d77;
+    --accent-purple: #4db6ac;
+    /* Lighter Teal */
+    --accent-pink: #e57373;
+    /* Soft Red for contrast if needed */
 
-    --border-light: rgba(148, 163, 184, 0.2);
-    --border-highlight: rgba(148, 163, 184, 0.4);
+    --border-color: #dae8eb;
+    --border-light: #dae8eb;
+    --border-highlight: #006d77;
 
-    --shadow-card: 0 8px 32px 0 rgba(30, 41, 59, 0.05);
-    /* Softer shadow */
-    --shadow-glow: 0 0 20px rgba(6, 182, 212, 0.1);
+    --bg-card: rgba(255, 255, 255, 0.8);
+    --bg-tertiary: #ffffff;
+    --bg-secondary: #ffffff;
+    --success-gradient: #006d77;
 
-    --radius-lg: 24px;
-    --radius-md: 16px;
-    --radius-sm: 12px;
+    --shadow-sm: 0 1px 2px 0 rgba(0, 109, 119, 0.05);
+    --shadow-md: 0 4px 6px -1px rgba(0, 109, 119, 0.1), 0 2px 4px -1px rgba(0, 109, 119, 0.06);
+    --shadow-card: 0 10px 15px -3px rgba(0, 109, 119, 0.1), 0 4px 6px -2px rgba(0, 109, 119, 0.05);
+    --shadow-glow: 0 0 20px rgba(0, 109, 119, 0.15);
 
-    --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --radius-lg: 16px;
+    --radius-md: 12px;
+    --radius-sm: 8px;
+
+    --transition: all 0.2s ease-in-out;
 }
 
 /* ===== Reset & Base ===== */
@@ -58,10 +65,8 @@ body {
     width: 100%;
     height: 100%;
     z-index: -1;
-    background:
-        radial-gradient(circle at 10% 20%, rgba(6, 182, 212, 0.1), transparent 40%),
-        radial-gradient(circle at 90% 80%, rgba(124, 58, 237, 0.1), transparent 40%);
-    opacity: 0.8;
+    background: #f4fbfb;
+    opacity: 1;
 }
 
 .container {
@@ -72,9 +77,9 @@ body {
 
 /* ===== Header ===== */
 .header {
-    background: rgba(15, 23, 42, 0.6);
+    background: rgba(255, 255, 255, 0.85);
     backdrop-filter: blur(16px);
-    border-bottom: 1px solid var(--border-light);
+    border-bottom: 1px solid var(--border-color);
     padding: 20px 0;
     position: sticky;
     top: 0;
@@ -97,23 +102,20 @@ body {
     font-size: 24px;
     font-weight: 800;
     letter-spacing: -0.5px;
-    background: var(--primary-gradient);
-    -webkit-background-clip: text;
-    background-clip: text;
-    -webkit-text-fill-color: transparent;
+    color: #000000;
 }
 
 /* ===== Modern Role Toggle ===== */
+/* ===== Modern Role Toggle ===== */
 .role-toggle {
-    background: rgba(241, 245, 249, 0.8);
+    background: #ffffff;
     padding: 6px;
     border-radius: 20px;
-    display: inline-flex;
-    margin: 0 auto 40px;
+    display: flex;
+    justify-content: center;
+    width: fit-content;
+    margin: 0 auto 40px auto;
     border: 1px solid var(--border-light);
-    position: relative;
-    left: 50%;
-    transform: translateX(-50%);
 }
 
 .role-btn {
@@ -137,17 +139,17 @@ body {
 /* ===== Glass Panel ===== */
 .panel {
     background: var(--surface-glass);
-    backdrop-filter: blur(24px);
-    -webkit-backdrop-filter: blur(24px);
-    border: 1px solid var(--border-light);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--border-color);
     border-radius: var(--radius-lg);
     padding: 40px;
     box-shadow: var(--shadow-card);
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    transition: var(--transition);
 }
 
 .panel:hover {
-    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+    box-shadow: 0 20px 25px -5px rgba(0, 109, 119, 0.1), 0 10px 10px -5px rgba(0, 109, 119, 0.04);
     border-color: var(--border-highlight);
 }
 
@@ -198,9 +200,9 @@ body {
 
 .step-active .step-icon {
     border-color: var(--accent-cyan);
-    background: rgba(34, 211, 238, 0.1);
+    background: rgba(0, 109, 119, 0.1);
     color: var(--accent-cyan);
-    box-shadow: 0 0 15px rgba(34, 211, 238, 0.3);
+    box-shadow: 0 0 0 4px rgba(0, 109, 119, 0.1);
 }
 
 .step-completed .step-icon {
@@ -247,11 +249,12 @@ body {
     justify-content: space-between;
     align-items: center;
     background: var(--bg-card);
-    backdrop-filter: blur(20px);
+    backdrop-filter: blur(12px);
     border: 1px solid var(--border-color);
     border-radius: var(--radius-lg);
-    padding: 24px;
-    margin-bottom: 32px;
+    padding: 32px;
+    margin-bottom: 40px;
+    box-shadow: var(--shadow-sm);
 }
 
 .user-info {
@@ -365,18 +368,24 @@ body {
 
 .panel-title {
     font-size: 24px;
-    font-weight: 600;
-    margin-bottom: 4px;
+    font-weight: 700;
+    color: #000000;
+    margin-bottom: 8px;
 }
 
 .panel-subtitle {
-    font-size: 14px;
-    color: var(--text-muted);
+    font-size: 15px;
+    color: var(--text-secondary);
 }
 
 /* ===== Peers List ===== */
 .peers-list {
     min-height: 200px;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 20px;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.02);
 }
 
 .empty-state,
@@ -438,7 +447,7 @@ body {
     justify-content: center;
     font-size: 16px;
     font-weight: 700;
-    color: #000000;
+    color: #ffffff;
 }
 
 .peer-details h4 {
@@ -620,8 +629,8 @@ body {
 .file-upload-area p {
     font-size: 18px;
     font-weight: 600;
-    color: var(--text-primary);
-    margin-bottom: 8px;
+    color: #000000;
+    margin-bottom: 12px;
 }
 
 .file-hint {
@@ -647,7 +656,7 @@ body {
 .transfer-log {
     margin-top: 32px;
     padding: 20px;
-    background: #1e293b;
+    background: #0f1c1e;
     /* Keep terminal dark for contrast or use #f8fafc for light */
     /* Let's go with a high contrast dark terminal even in light mode, it looks pro */
     color: #cbd5e1;
@@ -794,13 +803,13 @@ body {
 .btn-primary {
     background: var(--primary-gradient);
     color: #fff;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
-    box-shadow: 0 4px 15px rgba(34, 211, 238, 0.3);
+    box-shadow: 0 4px 6px -1px rgba(0, 109, 119, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .btn-primary:hover:not(:disabled) {
     transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(139, 92, 246, 0.4);
+    box-shadow: 0 8px 25px rgba(0, 109, 119, 0.25);
 }
 
 .btn-secondary {
@@ -833,9 +842,8 @@ body {
 .footer {
     position: relative;
     z-index: 1;
-    background: rgba(15, 23, 42, 0.8);
-    backdrop-filter: blur(10px);
-    border-top: 1px solid var(--border-light);
+    background: #e0f2f1;
+    border-top: 1px solid var(--border-color);
     padding: 24px 0;
     text-align: center;
     color: var(--text-secondary);
@@ -962,13 +970,69 @@ body {
 
 /* ===== New UI Styles ===== */
 
-/* Role Toggle */
-.role-toggle {
+/* Role Selection Screens */
+.role-selection-container {
     display: flex;
-    gap: 16px;
+    gap: 32px;
     justify-content: center;
-    margin-bottom: 60px;
+    flex-wrap: wrap;
+    margin-top: 40px;
 }
+
+.role-card {
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: 48px 32px;
+    text-align: center;
+    width: 320px;
+    transition: var(--transition);
+    box-shadow: var(--shadow-md);
+    position: relative;
+    overflow: hidden;
+}
+
+.role-card:hover {
+    transform: translateY(-8px);
+    box-shadow: var(--shadow-card);
+    border-color: var(--accent-cyan);
+}
+
+.role-icon {
+    width: 90px;
+    height: 90px;
+    border-radius: 50%;
+    margin: 0 auto 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #ffffff;
+    font-size: 32px;
+    box-shadow: 0 10px 20px rgba(0, 109, 119, 0.2);
+}
+
+.sender-gradient {
+    background: #006d77;
+}
+
+.receiver-gradient {
+    background: #004d40;
+}
+
+.role-card h3 {
+    font-size: 24px;
+    font-weight: 700;
+    margin-bottom: 12px;
+    color: var(--text-primary);
+}
+
+.role-card p {
+    color: var(--text-secondary);
+    margin-bottom: 32px;
+    line-height: 1.6;
+}
+
+/* Role Toggle styling consolidated above */
 
 .role-btn {
     padding: 12px 40px;
@@ -992,7 +1056,7 @@ body {
     background: var(--primary-gradient);
     border-color: transparent;
     color: #000000;
-    box-shadow: 0 4px 20px rgba(6, 182, 212, 0.4);
+    box-shadow: 0 4px 20px rgba(0, 109, 119, 0.4);
 }
 
 /* Main Display */
@@ -1017,11 +1081,11 @@ body {
     position: absolute;
     width: 40px;
     height: 40px;
-    background: radial-gradient(circle, var(--accent-cyan), var(--accent-purple));
+    background: var(--accent-cyan);
     border-radius: 50%;
     box-shadow:
         0 0 30px var(--accent-cyan),
-        0 0 60px rgba(0, 245, 255, 0.6),
+        0 0 60px rgba(0, 109, 119, 0.6),
         inset 0 0 20px rgba(255, 255, 255, 0.8);
     animation: pulse-glow 2s ease-in-out infinite;
     z-index: 2;
@@ -1031,7 +1095,7 @@ body {
     position: absolute;
     width: 3px;
     height: 15px;
-    background: linear-gradient(to top, transparent, var(--accent-cyan));
+    background: transparent;
     top: -15px;
     left: 50%;
     margin-left: -1.5px;
@@ -1065,21 +1129,21 @@ body {
 .orbit-1 {
     width: 100px;
     height: 100px;
-    border-color: rgba(6, 182, 212, 0.4);
+    border-color: rgba(0, 109, 119, 0.4);
     animation: rotate 4s linear infinite;
 }
 
 .orbit-2 {
     width: 150px;
     height: 150px;
-    border-color: rgba(139, 92, 246, 0.4);
+    border-color: rgba(77, 182, 172, 0.4);
     animation: rotate 6s linear infinite reverse;
 }
 
 .orbit-3 {
     width: 200px;
     height: 200px;
-    border-color: rgba(0, 245, 255, 0.3);
+    border-color: rgba(0, 109, 119, 0.3);
     animation: rotate 8s linear infinite;
 }
 
@@ -1094,14 +1158,14 @@ body {
     transform: translate(-50%, -50%);
     box-shadow:
         0 0 15px var(--accent-cyan),
-        0 0 30px rgba(0, 245, 255, 0.8);
+        0 0 30px rgba(0, 109, 119, 0.8);
 }
 
 .orbit-2 .orbit-dot {
     background: var(--accent-purple);
     box-shadow:
         0 0 15px var(--accent-purple),
-        0 0 30px rgba(168, 85, 247, 0.8);
+        0 0 30px rgba(77, 182, 172, 0.8);
 }
 
 .orbit-3 .orbit-dot {
@@ -1127,7 +1191,7 @@ body {
     100% {
         box-shadow:
             0 0 30px var(--accent-cyan),
-            0 0 60px rgba(0, 245, 255, 0.6),
+            0 0 60px rgba(0, 109, 119, 0.6),
             inset 0 0 20px rgba(255, 255, 255, 0.8);
         transform: scale(1);
     }
@@ -1135,7 +1199,7 @@ body {
     50% {
         box-shadow:
             0 0 40px var(--accent-cyan),
-            0 0 80px rgba(0, 245, 255, 0.9),
+            0 0 80px rgba(0, 109, 119, 0.9),
             inset 0 0 30px rgba(255, 255, 255, 1);
         transform: scale(1.1);
     }
@@ -1154,8 +1218,8 @@ body {
     background: var(--primary-gradient);
     -webkit-background-clip: text;
     background-clip: text;
-    -webkit-text-fill-color: transparent;
-    margin-bottom: 12px;
+    -webkit-text-fill-color: #000000;
+    margin-bottom: 24px;
 }
 
 .peer-code {
@@ -1164,7 +1228,7 @@ body {
     font-weight: 700;
     color: var(--accent-cyan);
     letter-spacing: 4px;
-    text-shadow: 0 0 30px rgba(34, 211, 238, 0.4);
+    text-shadow: 0 0 30px rgba(0, 109, 119, 0.4);
 }
 
 /* Mode Content */
@@ -1192,7 +1256,7 @@ body {
     border: 2px solid var(--border-light);
     border-radius: var(--radius-md);
     padding: 16px 20px;
-    color: var(--text-primary);
+    color: #000000;
     font-size: 18px;
     font-weight: 600;
     text-align: center;
@@ -1206,7 +1270,7 @@ body {
 .code-input:focus {
     outline: none;
     border-color: var(--accent-cyan);
-    box-shadow: 0 0 0 4px rgba(6, 182, 212, 0.2);
+    box-shadow: 0 0 0 4px rgba(0, 109, 119, 0.2);
 }
 
 .code-input::placeholder {
@@ -1252,10 +1316,7 @@ body {
 .peer-found-card h3 {
     font-size: 28px;
     font-weight: 700;
-    background: var(--primary-gradient);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    color: #000000;
     margin-bottom: 8px;
 }
 
@@ -1265,7 +1326,7 @@ body {
     font-weight: 600;
     color: var(--accent-cyan);
     letter-spacing: 2px;
-    margin-bottom: 24px;
+    margin-bottom: 32px;
 }
 
 /* Status Bar */
@@ -1336,4 +1397,8 @@ body {
         font-size: 16px;
         padding: 14px 16px;
     }
+
+
+
+
 }
