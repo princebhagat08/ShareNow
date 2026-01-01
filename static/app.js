@@ -25,11 +25,22 @@ function generateSimplePeerId() {
     return id;
 }
 
+// Generate random device name
+function generateDeviceName() {
+    const names = [
+        'Melon', 'Strawberry', 'Blueberry', 'Mango', 'Peach',
+        'Cherry', 'Grape', 'Orange', 'Lemon', 'Kiwi',
+        'Pineapple', 'Watermelon', 'Banana', 'Apple', 'Pear',
+        'Coconut', 'Papaya', 'Plum', 'Apricot', 'Raspberry'
+    ];
+    return names[Math.floor(Math.random() * names.length)];
+}
+
 // Application state
 const state = {
     peerId: generateSimplePeerId(),
-    userName: null,
-    userRole: null,
+    userName: generateDeviceName(),
+    userRole: 'receiver', // Default role is receiver
     sessionId: null,
     publicKey: null,
     sharedSecret: null,
@@ -38,6 +49,7 @@ const state = {
     pendingRequest: null,
     selectedFile: null,
     isConnected: false,
+    foundPeer: null, // Store found peer info
 
     // WebRTC
     peerConnection: null,
@@ -156,13 +168,21 @@ socket.on('peer_found', (data) => {
 });
 
 socket.on('peer_not_found', () => {
-    const searchResult = document.getElementById('search-result');
-    searchResult.innerHTML = `
-        <div class="empty-state">
-            <p>Peer not found</p>
-            <span>Please check the ID and try again</span>
-        </div>
-    `;
+    addLog('Peer not found', 'error');
+    alert('Peer not found. Please check the code and try again.');
+
+    // Reset find button
+    const findBtn = document.getElementById('find-peer-btn');
+    if (findBtn) {
+        findBtn.innerHTML = '<span class="btn-icon">🔍</span> Find';
+        findBtn.disabled = false;
+    }
+
+    // Hide peer found display
+    const peerFoundDisplay = document.getElementById('peer-found-display');
+    if (peerFoundDisplay) {
+        peerFoundDisplay.style.display = 'none';
+    }
 });
 
 // ==================== WebRTC Signaling Events ====================
@@ -270,22 +290,27 @@ function searchPeer() {
 }
 
 function displayFoundPeer(peer) {
-    const searchResult = document.getElementById('search-result');
-    searchResult.innerHTML = `
-        <div class="peer-item">
-            <div class="peer-info">
-                <div class="peer-avatar">${peer.name.charAt(0).toUpperCase()}</div>
-                <div class="peer-details">
-                    <h4>${peer.name}</h4>
-                    <p>${peer.role}</p>
-                </div>
-            </div>
-            <button class="btn btn-primary btn-sm" onclick="sendConnectionRequest('${peer.peer_id}', '${peer.name}')">
-                <span class="btn-icon">🔗</span>
-                Connect
-            </button>
-        </div>
-    `;
+    addLog(`Found peer: ${peer.name}`);
+
+    // Store found peer info
+    state.foundPeer = {
+        peerId: peer.peer_id,
+        name: peer.name,
+        role: peer.role
+    };
+
+    // Show peer found card
+    document.getElementById('found-peer-name').textContent = peer.name;
+    document.getElementById('found-peer-id').textContent = '#' + peer.peer_id;
+    document.getElementById('connect-peer-name').textContent = peer.name;
+    document.getElementById('peer-found-display').style.display = 'block';
+
+    // Update find button
+    const findBtn = document.getElementById('find-peer-btn');
+    findBtn.innerHTML = '<span class="btn-icon">✓</span> Found!';
+    setTimeout(() => {
+        findBtn.innerHTML = '<span class="btn-icon">🔍</span> Find';
+    }, 2000);
 }
 
 // ==================== Connection Management ====================
@@ -339,9 +364,12 @@ function establishConnection(peerId, peerName) {
     state.connectedPeer = peerId;
     state.isConnected = true;
 
-    // Hide peer discovery, show file transfer
-    document.getElementById('peer-discovery-panel').style.display = 'none';
+    // Hide peer discovery and role toggle, show file transfer
+    document.getElementById('discovery-panel').style.display = 'none';
+    document.getElementById('role-toggle-container').style.display = 'none';
     document.getElementById('file-transfer-panel').style.display = 'block';
+
+    // Update connected peer name display
     document.getElementById('connected-peer-name').textContent = `Connected to ${peerName}`;
 
     // Show appropriate interface
@@ -375,8 +403,9 @@ function disconnectPeer() {
     state.sharedSecret = null;
     state.cryptoKey = null;
 
-    // Show peer discovery, hide file transfer
-    document.getElementById('peer-discovery-panel').style.display = 'block';
+    // Show peer discovery and role toggle, hide file transfer
+    document.getElementById('discovery-panel').style.display = 'block';
+    document.getElementById('role-toggle-container').style.display = 'flex'; // Role toggle uses flex
     document.getElementById('file-transfer-panel').style.display = 'none';
 
     resetStatusIcons();
@@ -964,7 +993,137 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
+
+    // Auto-start the app
+    initializeApp();
 });
+
+// ==================== New UI Functions ====================
+
+function initializeApp() {
+    // Set session ID
+    state.sessionId = state.peerId;
+
+    // Update UI with device name and peer code
+    document.getElementById('device-name').textContent = state.userName;
+    document.getElementById('peer-code').textContent = '#' + state.peerId;
+
+    // Register with server
+    registerPeer();
+
+    // Generate keys automatically
+    generateKeys();
+
+    // Set initial status
+    updateConnectionStatus('connected');
+    document.getElementById('status-text').textContent = 'Ready';
+
+    console.log('App initialized');
+    console.log('Device Name:', state.userName);
+    console.log('Peer Code:', state.peerId);
+}
+
+function switchToRole(role) {
+    // Disconnect if connected
+    if (state.isConnected) {
+        if (!confirm('Switching roles will disconnect you from the current peer. Continue?')) {
+            return;
+        }
+        disconnectPeer();
+    }
+
+    // Update role
+    state.userRole = role;
+
+    // Update UI
+    const receiverBtn = document.getElementById('receiver-btn');
+    const senderBtn = document.getElementById('sender-btn');
+    const receiverMode = document.getElementById('receiver-mode');
+    const senderMode = document.getElementById('sender-mode');
+
+    if (role === 'receiver') {
+        receiverBtn.classList.add('active');
+        senderBtn.classList.remove('active');
+        receiverMode.style.display = 'block';
+        senderMode.style.display = 'none';
+    } else {
+        receiverBtn.classList.remove('active');
+        senderBtn.classList.add('active');
+        receiverMode.style.display = 'none';
+        senderMode.style.display = 'block';
+
+        // Reset sender mode UI
+        document.getElementById('peer-found-display').style.display = 'none';
+        document.getElementById('code-input').value = '';
+        state.foundPeer = null;
+    }
+
+    // Re-register with new role
+    registerPeer();
+
+    addLog(`Switched to ${role} mode`);
+}
+
+function copyPeerCode() {
+    const peerCode = state.peerId;
+    navigator.clipboard.writeText(peerCode).then(() => {
+        const btn = event.target.closest('button');
+        const originalHTML = btn.innerHTML;
+        btn.innerHTML = '<span class="btn-icon">✓</span> Copied!';
+        setTimeout(() => {
+            btn.innerHTML = originalHTML;
+        }, 2000);
+    }).catch(err => {
+        console.error('Failed to copy:', err);
+        alert('Failed to copy code. Please copy manually: ' + peerCode);
+    });
+}
+
+function findPeer() {
+    const codeInput = document.getElementById('code-input');
+    const targetPeerId = codeInput.value.trim().toUpperCase();
+
+    if (!targetPeerId) {
+        alert('Please enter a peer code');
+        return;
+    }
+
+    if (targetPeerId === state.peerId) {
+        alert('You cannot connect to yourself!');
+        return;
+    }
+
+    // Hide previous peer found display
+    document.getElementById('peer-found-display').style.display = 'none';
+
+    // Update button to show searching
+    const findBtn = document.getElementById('find-peer-btn');
+    findBtn.innerHTML = '<span class="btn-icon">⏳</span> Searching...';
+    findBtn.disabled = true;
+
+    // Search for the peer
+    socket.emit('find_peer', { target_peer_id: targetPeerId });
+    addLog(`Searching for peer: ${targetPeerId}`);
+
+    // Re-enable button after timeout
+    setTimeout(() => {
+        findBtn.disabled = false;
+        if (findBtn.innerHTML.includes('Searching')) {
+            findBtn.innerHTML = '<span class="btn-icon">🔍</span> Find';
+        }
+    }, 3000);
+}
+
+function connectToFoundPeer() {
+    if (!state.foundPeer) {
+        alert('No peer found. Please search for a peer first.');
+        return;
+    }
+
+    // Send connection request
+    sendConnectionRequest(state.foundPeer.peerId, state.foundPeer.name);
+}
 
 console.log('Secure File Sharing P2P Application Loaded (WebRTC DataChannel)');
 console.log('Peer ID:', state.peerId);
+console.log('Device Name:', state.userName);

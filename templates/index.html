@@ -44,8 +44,8 @@
 
     <main class="main-content">
         <div class="container">
-            <!-- Role Selection Screen -->
-            <div id="role-selection-screen" class="screen active">
+            <!-- Role Selection Screen (Hidden - auto-start) -->
+            <div id="role-selection-screen" class="screen" style="display: none;">
                 <div class="intro-section">
                     <h2 class="section-title">Choose Your Role</h2>
                     <p class="section-description">Select whether you want to send or receive files</p>
@@ -88,8 +88,8 @@
                 </div>
             </div>
 
-            <!-- Name Input Screen -->
-            <div id="name-input-screen" class="screen">
+            <!-- Name Input Screen (Hidden - auto-start) -->
+            <div id="name-input-screen" class="screen" style="display: none;">
                 <div class="intro-section">
                     <h2 class="section-title">Enter Your Name</h2>
                     <p class="section-description">This name will be visible to other peers on the network</p>
@@ -106,69 +106,91 @@
             </div>
 
             <!-- Main Application Screen -->
-            <div id="main-app-screen" class="screen">
-                <div class="app-header">
-                    <div class="user-info">
-                        <div class="user-avatar" id="user-avatar"></div>
-                        <div>
-                            <h3 id="user-name-display"></h3>
-                            <p id="user-role-display"></p>
-                        </div>
-                    </div>
-                    <div class="connection-status">
-                        <span class="status-indicator" id="status-indicator"></span>
-                        <span id="status-text">Connecting...</span>
-                    </div>
+            <div id="main-app-screen" class="screen active">
+                <!-- Role Toggle -->
+                <div class="role-toggle" id="role-toggle-container">
+                    <button class="role-btn active" id="receiver-btn" onclick="switchToRole('receiver')">
+                        Receiver
+                    </button>
+                    <button class="role-btn" id="sender-btn" onclick="switchToRole('sender')">
+                        Sender
+                    </button>
                 </div>
 
-                <!-- Peer Discovery Panel -->
-                <div class="panel" id="peer-discovery-panel">
-                    <div class="panel-header">
-                        <div class="panel-icon discovery-icon">
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                stroke-width="2">
-                                <circle cx="12" cy="12" r="10" />
-                                <circle cx="12" cy="12" r="3" />
-                                <line x1="12" y1="2" x2="12" y2="5" />
-                                <line x1="12" y1="19" x2="12" y2="22" />
-                                <line x1="4.93" y1="4.93" x2="7.05" y2="7.05" />
-                                <line x1="16.95" y1="16.95" x2="19.07" y2="19.07" />
-                            </svg>
+                <!-- Main Content Area -->
+                <div class="main-display" id="discovery-panel">
+                    <!-- Animated Orbital Logo (P2P Connection Icon) -->
+                    <div class="orbital-logo">
+                        <div class="orbital-center">
+                            <!-- Sun rays -->
+                            <div class="sun-ray" style="transform: rotate(0deg)"></div>
+                            <div class="sun-ray" style="transform: rotate(45deg)"></div>
+                            <div class="sun-ray" style="transform: rotate(90deg)"></div>
+                            <div class="sun-ray" style="transform: rotate(135deg)"></div>
+                            <div class="sun-ray" style="transform: rotate(180deg)"></div>
+                            <div class="sun-ray" style="transform: rotate(225deg)"></div>
+                            <div class="sun-ray" style="transform: rotate(270deg)"></div>
+                            <div class="sun-ray" style="transform: rotate(315deg)"></div>
                         </div>
-                        <div>
-                            <h3 class="panel-title" id="discovery-title">Peer Discovery</h3>
-                            <p class="panel-subtitle" id="discovery-subtitle">Connect with peers</p>
+                        <div class="orbit orbit-1">
+                            <div class="orbit-dot"></div>
                         </div>
-                    </div>
-
-                    <!-- Receiver: Display Peer ID -->
-                    <div id="receiver-id-display" style="display: none;">
-                        <div class="peer-id-card">
-                            <div class="peer-id-label">Your Unique Peer ID</div>
-                            <div class="peer-id-value" id="peer-id-display"></div>
-                            <button class="btn btn-secondary btn-sm" onclick="copyPeerId()">
-                                <span class="btn-icon">📋</span>
-                                Copy ID
-                            </button>
-                            <p class="peer-id-hint">Share this ID with the sender to receive files</p>
+                        <div class="orbit orbit-2">
+                            <div class="orbit-dot"></div>
+                        </div>
+                        <div class="orbit orbit-3">
+                            <div class="orbit-dot"></div>
                         </div>
                     </div>
 
-                    <!-- Sender: Search for Peer -->
-                    <div id="sender-search-panel" style="display: none;">
-                        <div class="search-container">
-                            <input type="text" id="peer-search-input" class="peer-search-input"
-                                placeholder="Enter receiver's Peer ID..." />
-                            <button class="btn btn-primary" onclick="searchPeer()">
+                    <!-- Device Info -->
+                    <div class="device-info">
+                        <h2 class="device-name" id="device-name">Loading...</h2>
+                        <div class="peer-code" id="peer-code">#000-000</div>
+                    </div>
+
+                    <!-- Receiver Mode: Show Peer Code -->
+                    <div id="receiver-mode" class="mode-content">
+                        <p class="mode-instruction">Share your code with the sender</p>
+                        <button class="btn btn-primary btn-large" onclick="copyPeerCode()">
+                            <span class="btn-icon">📋</span>
+                            Copy Code
+                        </button>
+                    </div>
+
+                    <!-- Sender Mode: Enter Code -->
+                    <div id="sender-mode" class="mode-content" style="display: none;">
+                        <p class="mode-instruction">Enter receiver's code to find them</p>
+                        <div class="code-input-container">
+                            <input type="text" id="code-input" class="code-input"
+                                placeholder="Enter code (e.g., ABC-123)" maxlength="7">
+                            <button class="btn btn-primary btn-large" onclick="findPeer()" id="find-peer-btn">
                                 <span class="btn-icon">🔍</span>
-                                Search
+                                Find
                             </button>
                         </div>
-                        <div id="search-result" class="peers-list"></div>
+
+                        <!-- Peer Found Display -->
+                        <div id="peer-found-display" class="peer-found-card" style="display: none;">
+                            <div class="peer-found-icon">👤</div>
+                            <h3 id="found-peer-name">Peer Name</h3>
+                            <p id="found-peer-id">#ABC-123</p>
+                            <button class="btn btn-primary btn-large" onclick="connectToFoundPeer()"
+                                id="connect-peer-btn">
+                                <span class="btn-icon">🔗</span>
+                                Connect to <span id="connect-peer-name">Peer</span>
+                            </button>
+                        </div>
                     </div>
                 </div>
 
-                <!-- File Transfer Panel -->
+                <!-- Connection Status -->
+                <div class="status-bar">
+                    <span class="status-indicator" id="status-indicator"></span>
+                    <span id="status-text">Ready</span>
+                </div>
+
+                <!-- File Transfer Panel (Hidden by default, shown when connected) -->
                 <div class="panel" id="file-transfer-panel" style="display: none;">
                     <div class="panel-header">
                         <div class="panel-icon transfer-icon">
